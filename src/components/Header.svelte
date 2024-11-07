@@ -65,7 +65,7 @@
 			role="navigation"
 			aria-label="Main"
 			class="fixed w-full items-center h-screen inset-0 z-30 bg-white-off justify-center flex-row gap-6 text-black {open
-				? 'flex flex-col'
+				? 'flex flex-col '
 				: 'hidden'}"
 		>
 			<li>
