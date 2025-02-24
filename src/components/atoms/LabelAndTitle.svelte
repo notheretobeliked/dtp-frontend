@@ -16,7 +16,7 @@
 	{#if label}
 		{#if ref}
 			<div class="flex flex-row w-full justify-between">
-				<p class="text-{isArabic ? 'ar-xs font-manchette' : 'xs font-martina tracking-widest'} uppercase mb-1">{label}</p>
+				<p class="text-{isArabic ? 'ar-xs font-lyon' : 'xs font-martina tracking-widest'} uppercase mb-1">{label}</p>
 				<a
 					href="/{$page.data.lang}/library/{ref.toLowerCase()}"
 					class="text-{isArabic ? 'ar-xs font-lyon' : 'xs font-martina tracking-widest'}  uppercase mb-1">#</a

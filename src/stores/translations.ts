@@ -27,7 +27,7 @@ export const labelTranslations = writable({
 	},
 	author: {
 		en: 'Author',
-		ar: 'مؤلف'
+		ar: 'المؤلف/ة'
 	},
 	translator: {
 		en: 'Translator',
@@ -79,7 +79,7 @@ export const labelTranslations = writable({
 	},
 	numberOfPages: {
 		en: 'Pages',
-		ar: 'عدد الصفحات'
+		ar: 'صفحة'
 	},
 	size: {
 		en: 'Size',
@@ -107,7 +107,7 @@ export const labelTranslations = writable({
     },
     artistdesigner: {
         en: 'Artist/designer',
-        ar: 'الفنان/المُصمّم'
+        ar: 'الفنان/ة - المُصمّم/ة'
     },
     search: {
         en: 'Search',
@@ -131,7 +131,7 @@ export const labelTranslations = writable({
 	},
 	learninghub: {
 		en: 'Learning hub',
-		ar: 'مركز التعلم'
+		ar: 'مركز التعلّم'
 	},
 	backtolearninghub: {
 		en: 'Back to Learning hub',

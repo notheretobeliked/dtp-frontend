@@ -173,7 +173,7 @@
 					href={currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub'}
 					class="text-center"
 				>
-					<span class="block !font-manchette text-xl lg:text-2xl">مركز التعلم </span>
+					<span class="block !font-manchette text-xl lg:text-2xl">مركز التعلّم</span>
 					{#if $language === 'en'}
 						<span class="block font-boogy text-xl lg:text-2xl">Learning hub</span>
 					{/if}
