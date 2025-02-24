@@ -50,12 +50,6 @@ export const load: LayoutServerLoad<LoadReturn> = async function load({ params, 
 
 		const { data }: { data: PageMetaQuery } = await response.json()
 
-
-		console.log('Current URI:', uri)
-		console.log('Is Special Route:', isSpecialRoute)
-		console.log('GraphQL Response:', JSON.stringify(data, null, 2))
-		console.log('Page Data:', data.page)
-
 		
 		// Check if data exists first
 		if (!data) {
