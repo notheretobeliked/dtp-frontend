@@ -153,7 +153,17 @@
 				: 'hidden'}"
 		>
 			<li>
-				<a href="/{currentLanguage}" class="text-center">
+				<a
+					href="/{currentLanguage}"
+					on:click|preventDefault={() => {
+						if (currentPagePath === `/${currentLanguage}`) {
+							open = false;
+						} else {
+							goto(`/${currentLanguage}`);
+						}
+					}}
+					class="text-center"
+				>
 					<span class="block !font-manchette text-xl lg:text-2xl"> معرض </span>
 					{#if $language === 'en'}
 						<span class="block font-boogy text-xl lg:text-2xl">Exhibition</span>
@@ -161,7 +171,17 @@
 				</a>
 			</li>
 			<li>
-				<a href="/{currentLanguage}/library" class="text-center">
+				<a
+					href="/{currentLanguage}/library"
+					on:click|preventDefault={() => {
+						if (currentPagePath === `/${currentLanguage}/library`) {
+							open = false;
+						} else {
+							goto(`/${currentLanguage}/library`);
+						}
+					}}
+					class="text-center"
+				>
 					<span class="block !font-manchette text-xl lg:text-2xl">مكتبة </span>
 					{#if $language === 'en'}
 						<span class="block font-boogy text-xl lg:text-2xl">Library</span>
@@ -171,6 +191,14 @@
 			<li>
 				<a
 					href={currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub'}
+					on:click|preventDefault={() => {
+						const path = currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub';
+						if (currentPagePath === path) {
+							open = false;
+						} else {
+							goto(path);
+						}
+					}}
 					class="text-center"
 				>
 					<span class="block !font-manchette text-xl lg:text-2xl">مركز التعلّم</span>
@@ -180,7 +208,18 @@
 				</a>
 			</li>
 			<li>
-				<a href={currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about'} class="text-center">
+				<a
+					href={currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about'}
+					on:click|preventDefault={() => {
+						const path = currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about';
+						if (currentPagePath === path) {
+							open = false;
+						} else {
+							goto(path);
+						}
+					}}
+					class="text-center"
+				>
 					<span class="block !font-manchette text-xl lg:text-2xl">من نحن </span>
 					{#if $language === 'en'}
 						<span class="block font-boogy text-xl lg:text-2xl">About</span>
