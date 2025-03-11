@@ -43,27 +43,19 @@
 		if (containerRef) {
 			if (scrollInterval) clearInterval(scrollInterval)
 			
-			const isRTL = $language === 'ar'
 			const scrollStep = 5
 			
-			if (isRTL && !isInitialPositionSet) {
+			if (!isInitialPositionSet) {
 				containerRef.scrollLeft = containerRef.scrollWidth / 2
 				isInitialPositionSet = true
 			}
 			
 			scrollInterval = setInterval(() => {
-				if (isRTL) {
-					containerRef.scrollLeft -= scrollStep
+				containerRef.scrollLeft -= scrollStep
 
-					if (Math.abs(containerRef.scrollLeft) < 1) {
-						void containerRef.offsetHeight
-						containerRef.scrollLeft = containerRef.scrollWidth / 2
-					}
-				} else {
-					containerRef.scrollLeft += scrollStep
-					if (containerRef.scrollLeft >= containerRef.scrollWidth / 2) {
-						containerRef.scrollLeft = 0
-					}
+				if (Math.abs(containerRef.scrollLeft) < 1) {
+					void containerRef.offsetHeight
+					containerRef.scrollLeft = containerRef.scrollWidth / 2
 				}
 			}, 30)
 		}
@@ -183,7 +175,7 @@
 				<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
 			</div>
 		{:else}
-			<div bind:this={containerRef} class="images-container absolute w-full overflow-x-auto h-full">
+			<div bind:this={containerRef} class="images-container absolute w-full overflow-x-auto h-full" dir="rtl">
 				<div class="flex flex-nowrap h-full">
 					{#each duplicatedImages as image, i}
 						<div
