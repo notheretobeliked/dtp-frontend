@@ -190,7 +190,7 @@
 			dir={lang === 'ar' ? 'rtl' : 'ltr'}
 		>
 			<!-- Group 1 -->
-			<div class="lg:contents pl-4 lg:pl-0">
+			<div class="lg:contents {lang === 'en' ? 'pl-4 lg:pl-0' : 'pr-4 lg:pr-0'}">
 				<div class="lg:py-3 flex flex-col gap-2">
 					{#each labelData.group1 as { label, title, ref }, index}
 						<LabelAndTitle
@@ -213,7 +213,7 @@
 					{/each}
 				</div>
 			</div>
-			<div class="lg:contents pr-4 lg:pr-0">
+			<div class="lg:contents {lang === 'en' ? 'pr-4 lg:pr-0' : 'pl-4 lg:pl-0'}">
 				<!-- Group 3 -->
 				<div class="lg:py-3 flex flex-col gap-2">
 					{#each labelData.group3 as { label, title }, index}
