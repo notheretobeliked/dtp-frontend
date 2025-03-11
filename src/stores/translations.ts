@@ -136,5 +136,9 @@ export const labelTranslations = writable({
 	backtolearninghub: {
 		en: 'Back to Learning hub',
 		ar: 'العودة إلى مركز التعلم'
+	},
+	all: {
+		en: 'All',
+		ar: 'الكل'
 	}
 })

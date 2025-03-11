@@ -129,7 +129,7 @@
 
 				<div class="flex-1">
 					<Button
-						label="All"
+						label={$labelTranslations.all[$language]}
 						active={selectedCategory === null}
 						fullWidth
 						on:click={() => handleCategorySelect(null)}
