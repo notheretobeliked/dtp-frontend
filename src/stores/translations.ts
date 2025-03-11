@@ -79,7 +79,7 @@ export const labelTranslations = writable({
 	},
 	numberOfPages: {
 		en: 'Pages',
-		ar: 'صفحة'
+		ar: 'عدد الصفحات'
 	},
 	size: {
 		en: 'Size',
@@ -95,7 +95,7 @@ export const labelTranslations = writable({
 	},
 	pages: {
 		en: 'pages',
-		ar: 'الصفحات'
+		ar: 'صفحة'
 	},
     image: {
         en: 'image',
