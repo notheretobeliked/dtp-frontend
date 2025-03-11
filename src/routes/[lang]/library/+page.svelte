@@ -238,7 +238,7 @@
 
 							{#if $filterStore.selectedArtist}
 								<button
-									class="absolute right-2 top-1/2 -translate-y-1/2"
+									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
 									on:click|stopPropagation={() => updateFilter('selectedArtist', '')}
 								>
 									×
@@ -286,7 +286,7 @@
 
 							{#if $filterStore.selectedAuthor}
 								<button
-									class="absolute right-2 top-1/2 -translate-y-1/2"
+									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
 									on:click|stopPropagation={() => updateFilter('selectedAuthor', '')}
 								>
 									×
@@ -333,7 +333,7 @@
 
 							{#if $filterStore.selectedPublisher}
 								<button
-									class="absolute right-2 top-1/2 -translate-y-1/2"
+									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
 									on:click|stopPropagation={() => updateFilter('selectedPublisher', '')}
 								>
 									×
@@ -380,7 +380,7 @@
 							</span>
 							{#if $filterStore.yearFrom !== yearsAscending[0]}
 								<button
-									class="absolute right-2 top-1/2 -translate-y-1/2"
+									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
 									on:click|stopPropagation={() => updateFilter('yearFrom', yearsAscending[0])}
 								>
 									×
@@ -429,7 +429,7 @@
 							</span>
 							{#if $filterStore.yearTo !== yearsDescending[0]}
 								<button
-									class="absolute right-2 top-1/2 -translate-y-1/2"
+									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
 									on:click|stopPropagation={() => updateFilter('yearTo', yearsDescending[0])}
 								>
 									×
