@@ -179,6 +179,8 @@
 
 	const getBgClass = (bgColor: string | null): string => {
 		switch (bgColor) {
+			case 'white-off':
+				return 'bg-white-off'
 			case 'green':
 				return 'bg-green'
 			case 'black':
