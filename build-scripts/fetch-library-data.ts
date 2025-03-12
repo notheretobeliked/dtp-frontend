@@ -32,7 +32,8 @@ export function checkResponse(response: Response) {
 	}
 }
 
-const restructureLibraryItems = (data: LibraryItemsQuery) => {
+const restructureLibraryItems = (data: LibraryItemsQuery, language: string) => {
+	const separator = language === 'ar' ? '، ' : ', '
 	return data.books?.nodes
 		?.sort((a, b) => a.slug.localeCompare(b.slug))
 		.map((book) => {
@@ -111,20 +112,20 @@ const restructureLibraryItems = (data: LibraryItemsQuery) => {
 					.map((publisher) => `${publisher.name} ${publisher.slug}`)
 					.join(' ')
 					.toLowerCase(),
-				publisher: bookData.publisher?.nodes.map((p) => p.name).join(', ') ?? null,
-				author: bookData.personAuthor?.nodes.map((a) => a.name).join(', ') ?? null,
-				coverDesign: bookData.personCoverDesign?.nodes.map((d) => d.name).join(', ') ?? null,
+				publisher: bookData.publisher?.nodes.map((p) => p.name).join(separator) ?? null,
+				author: bookData.personAuthor?.nodes.map((a) => a.name).join(separator) ?? null,
+				coverDesign: bookData.personCoverDesign?.nodes.map((d) => d.name).join(separator) ?? null,
 				coverIllustration:
-					bookData.personCoverIllustration?.nodes.map((i) => i.name).join(', ') ?? null,
-				pageDesign: bookData.personPageDesign?.nodes.map((d) => d.name).join(', ') ?? null,
+					bookData.personCoverIllustration?.nodes.map((i) => i.name).join(separator) ?? null,
+				pageDesign: bookData.personPageDesign?.nodes.map((d) => d.name).join(separator) ?? null,
 				pageCalligraphy:
-					bookData.personPageCalligraphy?.nodes.map((c) => c.name).join(', ') ?? null,
+					bookData.personPageCalligraphy?.nodes.map((c) => c.name).join(separator) ?? null,
 				pageIllustration:
-					bookData.personPageIllustration?.nodes.map((i) => i.name).join(', ') ?? null,
-				translation: bookData.personTranslation?.nodes.map((t) => t.name).join(', ') ?? null,
+					bookData.personPageIllustration?.nodes.map((i) => i.name).join(separator) ?? null,
+				translation: bookData.personTranslation?.nodes.map((t) => t.name).join(separator) ?? null,
 				coverCalligraphy:
-					bookData.personCoverCalligraphy?.nodes.map((c) => c.name).join(', ') ?? null,
-				collection: bookData.collection?.nodes.map((c) => c.name).join(', ') ?? null,
+					bookData.personCoverCalligraphy?.nodes.map((c) => c.name).join(separator) ?? null,
+				collection: bookData.collection?.nodes.map((c) => c.name).join(separator) ?? null,
 				thumbnailCoverImage: firstImage,
 				thumbnailImages: bookData.images?.nodes,
 				artistFilterTerm,
@@ -173,7 +174,7 @@ async function fetchAllLibraryItems(language: string) {
 	}
 
 	return {
-		books: restructureLibraryItems({ books: { nodes: allBooks } }),
+		books: restructureLibraryItems({ books: { nodes: allBooks } }, language),
 		taxonomies: extractUniqueTaxonomies(allBooks)
 	}
 }
