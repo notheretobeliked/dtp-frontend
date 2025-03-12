@@ -62,9 +62,9 @@ export default {
 			xl: ['2.5rem', '1.05'],
 			'2xl': ['2.875rem', '1'],
 			'3xl': ['3.275rem', '1'],
-			'4xl': ['4.313rem', '1'],
-			// Arabic script sizes
-			'ar-xs': '.6rem',
+			'4xl': ['4.313re8', '1'],
+			// Arabic script8sizes
+			'ar-xs': '.8rem',
 			'ar-sm': ['1rem', '1.3'],
 			'ar-base': ['1.2rem', '1.4'],
 			'ar-lg': ['2rem', '1.2'],
