@@ -160,6 +160,31 @@
 		$activeBook = reference
 		console.log('Set active book reference:', reference)
 	}
+
+	function getImageOrientation(image: any): 'portrait' | 'landscape' | 'square' {
+		const largeSize = image?.mediaDetails?.sizes?.find(size => size?.name === 'large')
+		if (!largeSize?.width || !largeSize?.height) return 'portrait' // Default
+
+		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
+		if (aspectRatio > 1.1) return 'landscape'
+		if (aspectRatio < 0.9) return 'portrait'
+		return 'square' // For images that are approximately square
+	}
+
+	function getImageHeightClass(image: any, groupLayout: string): string {
+		const largeSize = image?.mediaDetails?.sizes?.find(size => size?.name === 'large')
+		if (!largeSize?.width || !largeSize?.height) return 'h-[300px] lg:h-[430px]' // Default
+		
+		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
+		
+		if (groupLayout === 'organic-landscape') {
+			// If aspect ratio is less than 1.7:1, use smaller height
+			return aspectRatio < 1.7 ? 'h-[200px]' : 'h-auto lg:h-[250px]'
+		} else {
+			// In normal organic layout, use the original heights
+			return 'h-[300px] lg:h-[430px]'
+		}
+	}
 </script>
 
 <div class="w-full flex flex-row">
@@ -303,7 +328,7 @@
 											{#if group.images?.nodes}
 												{#each group.images.nodes as image, i}
 													<div
-														class="relative h-[300px] lg:h-[527px] hover:scale-[101%] transition-all duration-200 {isInView
+														class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200 {isInView
 															? 'scale-100 opacity-100 translate-y-0'
 															: 'scale-100 opacity-100 translate-y-0'}"
 														on:click={() => handleImageClick(image.reference)}
@@ -374,9 +399,7 @@
 												<!-- First image -->
 												<div class="lg:col-span-2 flex justify-center">
 													<div
-														class="{group.layout[0] === 'organic-landscape'
-															? 'h-[200px]'
-															: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+														class="{getImageHeightClass(group.images.nodes[0], group.layout[0])} hover:scale-[101%] transition-all duration-200"
 														on:click={() => handleImageClick(group.images.nodes[0]?.reference)}
 														on:keydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[0]?.reference)}
 														role="button"
@@ -396,9 +419,7 @@
 												{#if group.images.nodes.length === 2}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="lg:mt-[50px] {group.layout[0] === 'organic-landscape'
-																? 'h-auto lg:h-[250px]'
-																: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+															class="{getImageHeightClass(group.images.nodes[1], group.layout[0])} hover:scale-[101%] transition-all duration-200"
 															on:click={() => handleImageClick(group.images.nodes[1]?.reference)}
 															on:keydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[1]?.reference)}
 															role="button"
@@ -419,9 +440,7 @@
 														{#if i % 2 === 0}
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
 																<div
-																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-auto lg:h-[250px]'
-																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
@@ -444,9 +463,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-auto lg:h-[250px]'
-																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
@@ -472,9 +489,7 @@
 																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
 															>
 																<div
-																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-auto lg:h-[250px]'
-																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
@@ -499,9 +514,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-auto lg:h-[250px]'
-																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
@@ -530,9 +543,7 @@
 													<!-- Final centered image (only if more than 3 images) -->
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="{group.layout[0] === 'organic-landscape'
-																? 'h-[250px]'
-																: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
+															class="{getImageHeightClass(group.images.nodes[group.images.nodes.length - 1], group.layout[0])} hover:scale-[101%] transition-all duration-200"
 															on:click={() =>
 																handleImageClick(
 																	group.images.nodes[group.images.nodes.length - 1]?.reference
