@@ -53,64 +53,63 @@
 		if (event.key === 'Escape') close()
 	}
 
-	$: if (viewer && image) {
-		viewer.open({
-			type: 'image',
-			url: image.sourceUrl,
-			buildPyramid: false,
-			crossOriginPolicy: 'Anonymous',
-			format: 'jpg'
-		})
-	}
-
 	onMount(async () => {
 		if (!browser) return
 
-		// Initialize OpenSeadragon
-		// Dynamically import OpenSeadragon
-		const OpenSeadragon = (await import('openseadragon')).default
+		// Check if device is mobile (width less than 768px)
+		const isMobile = window.innerWidth < 768
 
-		viewer = OpenSeadragon({
-			element: viewerElement,
-			prefixUrl: '', // Set to empty string
+		if (isMobile) {
+			// For mobile, just show a regular image
+			const imgElement = document.createElement('img')
+			imgElement.src = image.sourceUrl
+			imgElement.alt = image.altText || ''
+			imgElement.style.cssText = 'width: 100%; height: 100%; object-fit: contain;'
+			viewerElement.appendChild(imgElement)
+		} else {
+			// Initialize OpenSeadragon only for desktop
+			const OpenSeadragon = (await import('openseadragon')).default
 
-			navImages: {
-				zoomIn: {
-					REST: zoomInIcon,
-					GROUP: zoomInIcon,
-					HOVER: zoomInIcon,
-					DOWN: zoomInIcon
+			viewer = OpenSeadragon({
+				element: viewerElement,
+				prefixUrl: '',
+				navImages: {
+					zoomIn: {
+						REST: zoomInIcon,
+						GROUP: zoomInIcon,
+						HOVER: zoomInIcon,
+						DOWN: zoomInIcon
+					},
+					zoomOut: {
+						REST: zoomOutIcon,
+						GROUP: zoomOutIcon,
+						HOVER: zoomOutIcon,
+						DOWN: zoomOutIcon
+					},
+					home: {
+						REST: homeIcon,
+						GROUP: homeIcon,
+						HOVER: homeIcon,
+						DOWN: homeIcon
+					}
 				},
-				zoomOut: {
-					REST: zoomOutIcon,
-					GROUP: zoomOutIcon,
-					HOVER: zoomOutIcon,
-					DOWN: zoomOutIcon
-				},
-				home: {
-					REST: homeIcon,
-					GROUP: homeIcon,
-					HOVER: homeIcon,
-					DOWN: homeIcon
+				loadTilesWithAjax: true,
+				defaultZoomLevel: 0,
+				minZoomLevel: 0.3,
+				maxZoomLevel: 5,
+				visibilityRatio: 1,
+				constrainDuringPan: true,
+				showNavigationControl: true,
+				navigationControlAnchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
+				showFullPageControl: false,
+				gestureSettingsMouse: {
+					clickToZoom: true,
+					dblClickToZoom: true,
+					pinchToZoom: true,
+					scrollToZoom: true
 				}
-			},
-			loadTilesWithAjax: true, // Add this line
-			defaultZoomLevel: 0,
-			minZoomLevel: 0.3,
-			maxZoomLevel: 5,
-			visibilityRatio: 1,
-			constrainDuringPan: true,
-			showNavigationControl: true,
-			navigationControlAnchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
-
-			showFullPageControl: false,
-			gestureSettingsMouse: {
-				clickToZoom: true,
-				dblClickToZoom: true,
-				pinchToZoom: true,
-				scrollToZoom: true
-			}
-		})
+			})
+		}
 
 		document.addEventListener('keydown', handleKeydown)
 		return () => {
@@ -121,6 +120,17 @@
 			}
 		}
 	})
+
+	// Update the reactive statement to check for mobile
+	$: if (viewer && image && window.innerWidth >= 768) {
+		viewer.open({
+			type: 'image',
+			url: image.sourceUrl,
+			buildPyramid: false,
+			crossOriginPolicy: 'Anonymous',
+			format: 'jpg'
+		})
+	}
 </script>
 
 <div
