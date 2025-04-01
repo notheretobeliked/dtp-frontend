@@ -176,7 +176,6 @@
 	<div
 		onmouseenter={toggleImages}
 		onmouseleave={toggleImages}
-		aria-hidden="true"
 		class="group biglink {images.length === 0 ? 'py-6 md:py-12' : ''}"
 	>
 		<a href={link} class="block {!isMobile ? 'hover:scale-105 transition-all duration-300' : ''}">
