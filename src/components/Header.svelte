@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { preventDefault } from 'svelte/legacy';
+	import { preventDefault } from 'svelte/legacy'
 
 	import { onMount } from 'svelte'
 
@@ -15,19 +15,21 @@
 	let currentLanguage = $derived(currentPagePath.startsWith('/ar') ? 'ar' : 'en')
 
 	// Update the language path calculations
-	let englishLanguagePath =
-		$derived(currentPagePath === '/ar/library'
+	let englishLanguagePath = $derived(
+		currentPagePath === '/ar/library'
 			? '/en/library'
 			: currentLanguage === 'ar' && $page.data.translations?.find((t) => t.languageCode === 'en')
 				? '/en' + $page.data.translations.find((t) => t.languageCode === 'en').uri
-				: '/en')
+				: '/en'
+	)
 
-	let arabicLanguagePath =
-		$derived(currentPagePath === '/en/library'
+	let arabicLanguagePath = $derived(
+		currentPagePath === '/en/library'
 			? '/ar/library'
 			: currentLanguage === 'en' && $page.data.translations?.find((t) => t.languageCode === 'ar')
 				? '/ar' + $page.data.translations.find((t) => t.languageCode === 'ar').uri
-				: '/ar')
+				: '/ar'
+	)
 
 	// Add debug logging
 
@@ -118,7 +120,11 @@
 			>
 				<a href="/en" class="">Decolonizing the page</a>
 			</h1>
-			<div class="language-switcher {currentLanguage === 'en' ? 'text-right' : 'text-left' } lg:text-center font-martina justify-end w-full">
+			<div
+				class="language-switcher {currentLanguage === 'en'
+					? 'text-right'
+					: 'text-left'} lg:text-center font-martina justify-end w-full"
+			>
 				<a
 					class="{currentLanguage === 'en' ? 'hidden' : ''} lg:inline"
 					href={currentLanguage === 'en' ? currentPagePath : englishLanguagePath}
@@ -144,7 +150,7 @@
 				<a href="/ar">جماليّات التحرّر</a>
 			</h1>
 		</div>
-		<div class="" style="--padding:0"><Hamburger bind:open /></div>
+		<div class="" style="--padding:0"><Hamburger ariaControls="nav" --layer-height="1.5px" bind:open /></div>
 	</div>
 	<nav class="w-full flex px-4 pt-4 justify-between items-center h-12 md:h-24">
 		<ul
@@ -159,9 +165,9 @@
 					href="/{currentLanguage}"
 					onclick={preventDefault(() => {
 						if (currentPagePath === `/${currentLanguage}`) {
-							open = false;
+							open = false
 						} else {
-							goto(`/${currentLanguage}`);
+							goto(`/${currentLanguage}`)
 						}
 					})}
 					class="text-center"
@@ -177,9 +183,9 @@
 					href="/{currentLanguage}/library"
 					onclick={preventDefault(() => {
 						if (currentPagePath === `/${currentLanguage}/library`) {
-							open = false;
+							open = false
 						} else {
-							goto(`/${currentLanguage}/library`);
+							goto(`/${currentLanguage}/library`)
 						}
 					})}
 					class="text-center"
@@ -194,11 +200,11 @@
 				<a
 					href={currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub'}
 					onclick={preventDefault(() => {
-						const path = currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub';
+						const path = currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub'
 						if (currentPagePath === path) {
-							open = false;
+							open = false
 						} else {
-							goto(path);
+							goto(path)
 						}
 					})}
 					class="text-center"
@@ -213,11 +219,11 @@
 				<a
 					href={currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about'}
 					onclick={preventDefault(() => {
-						const path = currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about';
+						const path = currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about'
 						if (currentPagePath === path) {
-							open = false;
+							open = false
 						} else {
-							goto(path);
+							goto(path)
 						}
 					})}
 					class="text-center"
@@ -231,10 +237,3 @@
 		</ul>
 	</nav>
 </header>
-
-<style>
-	:global(.hamburger) {
-		--layer-height: 1.5px;
-	}
-
-</style>

@@ -35,7 +35,7 @@
 		"prettier-plugin-svelte": "^3.2.7",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
-		"svelte-hamburgers": "^4.2.1",
+		"svelte-hamburgers": "^5",
 		"tailwindcss": "^3.4.13",
 		"tslib": "^2.7.0",
 		"tsx": "^4.19.2",
