@@ -3,9 +3,13 @@
 	import { classNames } from '$lib/utilities/utilities'
 	import { language } from '$stores/language' 
 
-	export let block: CoreParagraph
+	interface Props {
+		block: CoreParagraph;
+	}
 
-	$: isArabic = $language === 'ar'
+	let { block }: Props = $props();
+
+	let isArabic = $derived($language === 'ar')
 
     const {
         content = '',
@@ -19,9 +23,9 @@
     const defaultFontFamily = fontFamily ?? 'martina'
     
     
-    $: finalFontFamily = $language === 'ar' ? 'lyon' : defaultFontFamily
+    let finalFontFamily = $derived($language === 'ar' ? 'lyon' : defaultFontFamily)
 	
-    $: finalAlign = $language === 'ar' ? 'right' : align
+    let finalAlign = $derived($language === 'ar' ? 'right' : align)
 
 
 

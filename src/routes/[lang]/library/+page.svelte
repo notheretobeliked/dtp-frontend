@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { run, stopPropagation } from 'svelte/legacy';
+
 	import { slide } from 'svelte/transition'
 	import { onMount } from 'svelte'
 	import { labelTranslations } from '$stores/translations'
 	import { filterStore } from '$stores/filterStore'
-	let isFilterOpen = false // Add this new state
+	let isFilterOpen = $state(false) // Add this new state
 	import { get } from 'svelte/store'
 	import { page } from '$app/stores'
 
@@ -12,9 +14,13 @@
 	import type { PageData } from './$types'
 	import type { Book } from '$lib/types/general'
 	import Label from '$components/molecules/label.svelte'
-	export let data: PageData
 	import { beforeNavigate } from '$app/navigation'
 	import { language } from '$stores/language'
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
 	beforeNavigate(() => {
 		filterStore.set({
 			selectedArtist: '',
@@ -25,17 +31,17 @@
 			searchFilter: ''
 		})
 	})
-	let filterHeight: number
+	let filterHeight: number = $state()
 
-	let books: Book[] = (data.books ?? []).map((book) => ({
+	let books: Book[] = $state((data.books ?? []).map((book) => ({
 		...book,
 		slug: book.slug ?? '',
 		thumbnailCoverImage: book.thumbnailCoverImage as unknown as ImageObject | null
-	})) as Book[]
-	let artists: { name: string; slug: string }[] = data.artists ?? []
-	let authors: { name: string; slug: string }[] = data.authors ?? []
-	let publishers: { name: string; slug: string }[] = data.publishers ?? []
-	let lang = data.language as 'ar' | 'en'
+	})) as Book[])
+	let artists: { name: string; slug: string }[] = $state(data.artists ?? [])
+	let authors: { name: string; slug: string }[] = $state(data.authors ?? [])
+	let publishers: { name: string; slug: string }[] = $state(data.publishers ?? [])
+	let lang = $state(data.language as 'ar' | 'en')
 	onMount(() => {
 		filterTop = filterContainer?.offsetTop || 0
 		filterHeight = filterContainer?.offsetHeight || 0
@@ -60,17 +66,17 @@
 
 	let yearsDescending = [...yearsAscending].reverse()
 
-	let filteredBooks: typeof books = []
+	let filteredBooks: typeof books = $state([])
 
-	let artistsOpen = false
-	let authorsOpen = false
-	let publishersOpen = false
-	let yearFromOpen = false
-	let yearToOpen = false
-	let filterContainer: HTMLDivElement
-	let scrollY: number
-	let filterTop: number
-	let isSticky = false
+	let artistsOpen = $state(false)
+	let authorsOpen = $state(false)
+	let publishersOpen = $state(false)
+	let yearFromOpen = $state(false)
+	let yearToOpen = $state(false)
+	let filterContainer: HTMLDivElement = $state()
+	let scrollY: number = $state()
+	let filterTop: number = $state()
+	let isSticky = $state(false)
 
 	function handleClickOutside(event: MouseEvent) {
 		const target = event.target as HTMLElement
@@ -83,9 +89,11 @@
 		}
 	}
 
-	$: if (filterContainer) {
-		filterHeight = filterContainer.offsetHeight
-	}
+	run(() => {
+		if (filterContainer) {
+			filterHeight = filterContainer.offsetHeight
+		}
+	});
 
 	// Initialize filterStore with default values
 	filterStore.set({
@@ -156,14 +164,14 @@
 	}
 
 	// Apply filters whenever the store changes
-	$: {
+	run(() => {
 		$filterStore
 		applyFilters()
 		isSticky = scrollY > filterTop - 80
-	}
+	});
 
 	// Handle route changes
-	$: {
+	run(() => {
 		$page.params.lang
 
 		// Reinitialize books and other data
@@ -178,7 +186,7 @@
 		lang = data.language as 'ar' | 'en'
 		// Reapply filters
 		applyFilters()
-	}
+	});
 
 	onMount(() => {
 		filterTop = filterContainer?.offsetTop || 0
@@ -206,7 +214,7 @@
 			<!-- Mobile Filter Toggle -->
 			<button
 				class="md:hidden w-full flex items-center justify-between px-2 py-1 bg-black text-white-pure border border-white rounded-md mb-2"
-				on:click={() => (isFilterOpen = !isFilterOpen)}
+				onclick={() => (isFilterOpen = !isFilterOpen)}
 			>
 				<span class="{lang === 'ar' ? 'text-ar-sm' : 'text-sm'}">{translations.filterBy?.[lang] || 'Filter by'}</span>
 				<svg
@@ -235,7 +243,7 @@
 							class="border-white border rounded-md p-2 {$filterStore.selectedArtist
 								? 'bg-white-off text-black'
 								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
-							on:click={() => (artistsOpen = !artistsOpen)}
+							onclick={() => (artistsOpen = !artistsOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
 								{$filterStore.selectedArtist
@@ -246,7 +254,7 @@
 							{#if $filterStore.selectedArtist}
 								<button
 									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
-									on:click|stopPropagation={() => updateFilter('selectedArtist', '')}
+									onclick={stopPropagation(() => updateFilter('selectedArtist', ''))}
 								>
 									×
 								</button>
@@ -261,7 +269,7 @@
 								{#each artists as artist}
 									<div
 										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
-										on:click={() => {
+										onclick={() => {
 											updateFilter('selectedArtist', artist.slug)
 											artistsOpen = false
 										}}
@@ -280,7 +288,7 @@
 							class="border-white border rounded-md p-2 {$filterStore.selectedAuthor
 								? 'bg-white-off text-black'
 								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
-							on:click={() => (authorsOpen = !authorsOpen)}
+							onclick={() => (authorsOpen = !authorsOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
 								{$filterStore.selectedAuthor
@@ -291,7 +299,7 @@
 							{#if $filterStore.selectedAuthor}
 								<button
 									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
-									on:click|stopPropagation={() => updateFilter('selectedAuthor', '')}
+									onclick={stopPropagation(() => updateFilter('selectedAuthor', ''))}
 								>
 									×
 								</button>
@@ -305,7 +313,7 @@
 								{#each authors as author}
 									<div
 										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
-										on:click={() => {
+										onclick={() => {
 											updateFilter('selectedAuthor', author.slug)
 											authorsOpen = false
 										}}
@@ -324,7 +332,7 @@
 							class="border-white border rounded-md p-2 {$filterStore.selectedPublisher
 								? 'bg-white-off text-black'
 								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
-							on:click={() => (publishersOpen = !publishersOpen)}
+							onclick={() => (publishersOpen = !publishersOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
 								{$filterStore.selectedPublisher
@@ -335,7 +343,7 @@
 							{#if $filterStore.selectedPublisher}
 								<button
 									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
-									on:click|stopPropagation={() => updateFilter('selectedPublisher', '')}
+									onclick={stopPropagation(() => updateFilter('selectedPublisher', ''))}
 								>
 									×
 								</button>
@@ -349,7 +357,7 @@
 								{#each publishers as publisher}
 									<div
 										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
-										on:click={() => {
+										onclick={() => {
 											updateFilter('selectedPublisher', publisher.slug)
 											publishersOpen = false
 										}}
@@ -368,7 +376,7 @@
 							class="border-white border rounded-md p-2 cursor-pointer relative flex items-center {lang === 'ar' ? 'text-right text-ar-sm' : 'text-sm'} {$filterStore.yearFrom !== yearsAscending[0]
 								? 'bg-white-off text-black'
 								: 'bg-black'}"
-							on:click={() => (yearFromOpen = !yearFromOpen)}
+							onclick={() => (yearFromOpen = !yearFromOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
 								{$filterStore.yearFrom || yearsAscending[0]}
@@ -376,7 +384,7 @@
 							{#if $filterStore.yearFrom !== yearsAscending[0]}
 								<button
 									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
-									on:click|stopPropagation={() => updateFilter('yearFrom', yearsAscending[0])}
+									onclick={stopPropagation(() => updateFilter('yearFrom', yearsAscending[0]))}
 								>
 									×
 								</button>
@@ -391,7 +399,7 @@
 								{#each yearsAscending as year}
 									<div
 										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
-										on:click={() => {
+										onclick={() => {
 											updateFilter('yearFrom', year)
 											if (parseInt(year) > parseInt($filterStore.yearTo)) {
 												updateFilter('yearTo', year)
@@ -411,7 +419,7 @@
 							class="border-white border rounded-md p-2 cursor-pointer relative flex items-center {lang === 'ar' ? 'text-right text-ar-sm' : 'text-sm'} {$filterStore.yearTo !== yearsDescending[0]
 								? 'bg-white-off text-black'
 								: 'bg-black'}"
-							on:click={() => (yearToOpen = !yearToOpen)}
+							onclick={() => (yearToOpen = !yearToOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
 								{$filterStore.yearTo || yearsDescending[0]}
@@ -419,7 +427,7 @@
 							{#if $filterStore.yearTo !== yearsDescending[0]}
 								<button
 									class="absolute { $language === 'ar' ? 'left-2' : 'right-2' } top-1/2 -translate-y-1/2"
-									on:click|stopPropagation={() => updateFilter('yearTo', yearsDescending[0])}
+									onclick={stopPropagation(() => updateFilter('yearTo', yearsDescending[0]))}
 								>
 									×
 								</button>
@@ -433,7 +441,7 @@
 								{#each yearsDescending as year}
 									<div
 										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
-										on:click={() => {
+										onclick={() => {
 											updateFilter('yearTo', year)
 											if (parseInt(year) < parseInt($filterStore.yearFrom)) {
 												updateFilter('yearFrom', year)
@@ -453,7 +461,7 @@
 					<input
 						type="text"
 						bind:value={$filterStore.searchFilter}
-						on:input={(e) => updateFilter('searchFilter', e.currentTarget.value)}
+						oninput={(e) => updateFilter('searchFilter', e.currentTarget.value)}
 						placeholder={translations.search[lang]}
 						class="border-white border rounded-md p-2 bg-black w-full {lang === 'ar'
 							? 'text-right pr-2 pl-8 font-lyon text-ar-sm'
@@ -462,7 +470,7 @@
 					{#if $filterStore.searchFilter}
 						<button
 							class="absolute {lang === 'ar' ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2"
-							on:click={() => updateFilter('searchFilter', '')}
+							onclick={() => updateFilter('searchFilter', '')}
 						>
 							×
 						</button>

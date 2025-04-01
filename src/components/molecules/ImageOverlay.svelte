@@ -1,17 +1,23 @@
 <script lang="ts">
+	import { run, self, stopPropagation } from 'svelte/legacy';
+
 	import { createEventDispatcher, onMount } from 'svelte'
 	import { browser } from '$app/environment'
 	import { fade } from 'svelte/transition'
 
 	import type { ImageObject } from '$lib/types/wp-types.ts'
 
-	export let image: ImageObject
-	export let images: ImageObject[]
-	export let currentIndex: number
+	interface Props {
+		image: ImageObject;
+		images: ImageObject[];
+		currentIndex: number;
+	}
+
+	let { image, images, currentIndex }: Props = $props();
 	
-	let useSimpleViewer = false
-	let isLoading = true
-	let loadError = false
+	let useSimpleViewer = $state(false)
+	let isLoading = $state(true)
+	let loadError = $state(false)
 
 	function encodeSvg(svg: string) {
 		return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`
@@ -40,9 +46,9 @@
 	`)
 
 	const dispatch = createEventDispatcher()
-	let viewer
-	let viewerElement: HTMLElement
-	let simpleImgElement: HTMLImageElement
+	let viewer = $state()
+	let viewerElement: HTMLElement = $state()
+	let simpleImgElement: HTMLImageElement = $state()
 
 	function close() {
 		dispatch('close')
@@ -210,30 +216,32 @@
 	})
 
 	// Update image when it changes
-	$: if (image && image.sourceUrl) {
-		if (useSimpleViewer) {
-			if (simpleImgElement) {
+	run(() => {
+		if (image && image.sourceUrl) {
+			if (useSimpleViewer) {
+				if (simpleImgElement) {
+					isLoading = true
+					simpleImgElement.src = image.sourceUrl
+				}
+			} else if (viewer && window.innerWidth >= 768) {
 				isLoading = true
-				simpleImgElement.src = image.sourceUrl
+				viewer.open({
+					type: 'image',
+					url: image.sourceUrl,
+					buildPyramid: false,
+					crossOriginPolicy: 'Anonymous',
+					format: 'jpg',
+					success: () => { isLoading = false }
+				})
 			}
-		} else if (viewer && window.innerWidth >= 768) {
-			isLoading = true
-			viewer.open({
-				type: 'image',
-				url: image.sourceUrl,
-				buildPyramid: false,
-				crossOriginPolicy: 'Anonymous',
-				format: 'jpg',
-				success: () => { isLoading = false }
-			})
 		}
-	}
+	});
 </script>
 
 <div
 	class="fixed inset-0 bg-black flex items-center justify-center z-50 w-full h-full"
-	on:click|self={close}
-	on:keydown={handleKeydown}
+	onclick={self(close)}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	transition:fade={{ duration: 300 }}
@@ -251,13 +259,13 @@
 			</div>
 		{/if}
 		
-		<div bind:this={viewerElement} class="w-full h-full" />
+		<div bind:this={viewerElement} class="w-full h-full"></div>
 
 		{#if images.length > 1}
 			<button
 				class="fixed top-1/2 left-12 transform -translate-y-1/2 text-white-pure z-[60]"
-				on:click|stopPropagation={() => navigate('prev')}
-				on:keydown={(e) => e.key === 'Enter' && navigate('prev')}
+				onclick={stopPropagation(() => navigate('prev'))}
+				onkeydown={(e) => e.key === 'Enter' && navigate('prev')}
 			>
 				<svg
 					width="18"
@@ -277,8 +285,8 @@
 			</button>
 			<button
 				class="fixed top-1/2 right-12 transform -translate-y-1/2 text-white-pure z-[60]"
-				on:click|stopPropagation={() => navigate('next')}
-				on:keydown={(e) => e.key === 'Enter' && navigate('next')}
+				onclick={stopPropagation(() => navigate('next'))}
+				onkeydown={(e) => e.key === 'Enter' && navigate('next')}
 			>
 				<svg
 					width="18"
@@ -299,8 +307,8 @@
 		{/if}
 		<button
 			class="fixed top-12 right-12 text-white-pure z-[60]"
-			on:click={close}
-			on:keydown={(e) => e.key === 'Enter' && close()}
+			onclick={close}
+			onkeydown={(e) => e.key === 'Enter' && close()}
 		>
 			<svg
 				width="35"

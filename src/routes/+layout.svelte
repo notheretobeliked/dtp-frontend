@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { run, createBubbler, stopPropagation } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	import '../app.css'
 	import { page, navigating } from '$app/stores'
 	import type { PageData } from './$types'
@@ -12,7 +15,12 @@
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
 
-	export let data: PageData
+	interface Props {
+		data: PageData;
+		children?: import('svelte').Snippet<[any]>;
+	}
+
+	let { data, children }: Props = $props();
 	let { seo, menu, uri } = data
 	const menuItems = menu.menuItems.nodes
 	const image = seo.opengraphImage
@@ -20,43 +28,47 @@
 	const pageTitle = seo.title
 	const siteUrl = seo.siteUrl
 	const siteTitle = seo.opengraphSiteName // Assuming this is used for og:site_name
-	let loading = false
+	let loading = $state(false)
 	afterNavigate(() => {
 		document.documentElement.lang = $language
 	})
 
-	$: {
+	run(() => {
 		menuItems
 		uri
 		seo
-	}
+	});
 
-	let showModal = false
-	let currentBook: string | null = null
+	let showModal = $state(false)
+	let currentBook: string | null = $state(null)
 
 	// Watch the activeBook store and find the matching book from page data
-	$: if ($activeBook) {
-		showModal = true
-		loading = true
-		fetch(`/api/library-items?ref=${$activeBook}&lang=${$language}`)
-			.then((res) => res.json())
-			.then((data) => {
-				currentBook = data || null
-				loading = false
-			})
-			.catch((error) => {
-				console.error('Error fetching book:', error)
-				currentBook = null
-				loading = false
-			})
-	}
+	run(() => {
+		if ($activeBook) {
+			showModal = true
+			loading = true
+			fetch(`/api/library-items?ref=${$activeBook}&lang=${$language}`)
+				.then((res) => res.json())
+				.then((data) => {
+					currentBook = data || null
+					loading = false
+				})
+				.catch((error) => {
+					console.error('Error fetching book:', error)
+					currentBook = null
+					loading = false
+				})
+		}
+	});
 
 	function closeModal() {
 		showModal = false
 		$activeBook = null
 	}
 
-	$: $language = $page.params.lang || 'en'
+	run(() => {
+		$language = $page.params.lang || 'en'
+	});
 </script>
 
 {#key $page.url.pathname}
@@ -75,24 +87,24 @@
 {/if}
 
 <main class="md:px-0">
-	<slot {data} />
+	{@render children?.({ data, })}
 </main>
 
 <!-- Add this at the bottom of your template -->
 {#if showModal}
-	<div class="fixed inset-0 z-50" on:click={closeModal}>
+	<div class="fixed inset-0 z-50" onclick={closeModal}>
 		<div
 			class="fixed bottom-0 bg-black w-full z-50 flex items-center justify-center p-4"
 			transition:slide={{ duration: 300, axis: 'y' }}
-			on:click={closeModal}
+			onclick={closeModal}
 			role="dialog"
 		>
 			<div
 				class="text-white-pure mx-auto max-w-screen-xl w-full max-h-[90vh] overflow-y-auto relative lg:overflow-y-visible"
-				on:click|stopPropagation
+				onclick={stopPropagation(bubble('click'))}
 			>
 				<div class="flex justify-end mb-4 w-full lg:absolute lg:translate-x-6">
-					<button class="text-gray-500 hover:text-gray-700" on:click={closeModal}>
+					<button class="text-gray-500 hover:text-gray-700" onclick={closeModal}>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"

@@ -1,8 +1,13 @@
 <script lang="ts">
 	import type { AcfHomePageBlock } from '$lib/graphql/generated'
-	export let block: AcfHomePageBlock
-	const content = block.children ?? [] // Provide a default empty array
 	import BlockRenderer from '$components/BlockRenderer.svelte'
+	interface Props {
+		block: AcfHomePageBlock;
+	}
+
+	let { block }: Props = $props();
+	const content = block.children ?? [] // Provide a default empty array
+
 </script>
 
 {#if content}

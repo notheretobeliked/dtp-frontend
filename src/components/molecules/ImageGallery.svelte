@@ -2,7 +2,11 @@
 	import Image from '$components/Image.svelte'
 	import ImageOverlay from './ImageOverlay.svelte'
 	import type { ImageObject } from '$lib/types/wp-types'
-	export let images: ImageObject[]
+	interface Props {
+		images: ImageObject[];
+	}
+
+	let { images = $bindable() }: Props = $props();
 
 	const getFilename = (image: ImageObject): string => {
 		const sourceUrl = image.mediaDetails.sizes[0].sourceUrl
@@ -14,7 +18,7 @@
 
 	images = images.reverse()
 
-	let selectedImageIndex: number | null = null
+	let selectedImageIndex: number | null = $state(null)
 
 	function openOverlay(index: number) {
 		selectedImageIndex = index
@@ -36,8 +40,8 @@
 	{#each images as image, index}
 		<figure class="h-[220px] cursor-pointer group">
 			<button
-				on:click={() => openOverlay(index)}
-				on:keydown={(e) => e.key === 'Enter' && openOverlay(index)}
+				onclick={() => openOverlay(index)}
+				onkeydown={(e) => e.key === 'Enter' && openOverlay(index)}
 				class="cursor-pointer block relative w-full h-full"
 			>
 				<Image imageObject={image} imageSize="thumbnail" fit="contain" />

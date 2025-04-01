@@ -6,8 +6,12 @@
 	import { labelTranslations } from '$stores/translations'
 	import { language } from '$stores/language'
 
-	export let block: EditorBlock
-	let showFullContent = false
+	interface Props {
+		block: EditorBlock;
+	}
+
+	let { block }: Props = $props();
+	let showFullContent = $state(false)
 
 	function toggleContent() {
 		showFullContent = !showFullContent
@@ -28,8 +32,8 @@
 <div>
 	<div class="flex justify-center mt-8 mb-8">
 		<button 
-			on:click={toggleContent}
-			on:keydown={(e) => e.key === 'Enter' && toggleContent()}
+			onclick={toggleContent}
+			onkeydown={(e) => e.key === 'Enter' && toggleContent()}
 			type="button"
 		>
 			<Button

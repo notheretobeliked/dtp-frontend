@@ -1,12 +1,7 @@
 <script lang="ts">
-	/*
-    this is the main component for outputting blocks.
-    it ingests an editorBlocks object, and outputs the relevant Core block
-    depending on what data is needed.
-    
-    todo: Write and extend more core blocks (see list below for included blocks)
-  */
-	export let forceFull: boolean = false
+	import { run } from 'svelte/legacy';
+
+	
 
 	let isInView: boolean
 
@@ -59,7 +54,6 @@
 		| (CoreEmbedType & NormalizedBlock)
 		| (CoreImageType & NormalizedBlock)
 
-	export let block: EditorBlock
 
 	import { getContext } from 'svelte'
 	const EXPANDED_KEY = Symbol('expanded')
@@ -82,17 +76,30 @@
 	import ExhibitionRoom from './blocks/ExhibitionRoom.svelte'
 	import ReadMoreWrapper from './ReadMoreWrapper.svelte'
 	import { isExpandedStore } from '$stores/expandedStore'
-	let align = block.attributes?.align || 'none'
-	let verticalAlignment = block.attributes?.verticalAlignment ?? null
+	interface Props {
+		/*
+    this is the main component for outputting blocks.
+    it ingests an editorBlocks object, and outputs the relevant Core block
+    depending on what data is needed.
+    
+    todo: Write and extend more core blocks (see list below for included blocks)
+  */
+		forceFull?: boolean;
+		block: EditorBlock;
+	}
 
-	$: {
+	let { forceFull = false, block }: Props = $props();
+	let align = $state(block.attributes?.align || 'none')
+	let verticalAlignment = $state(block.attributes?.verticalAlignment ?? null)
+
+	run(() => {
 		if ($isExpandedStore && verticalAlignment === 'center') {
 			verticalAlignment = 'top'
 		} else {
 			// Reset to original alignment when not expanded
 			verticalAlignment = block.attributes?.verticalAlignment ?? null
 		}
-	}
+	});
 	if (forceFull || block.name === 'core/column') align = 'full'
 	const bgColor = block.attributes?.backgroundColor ?? ''
 

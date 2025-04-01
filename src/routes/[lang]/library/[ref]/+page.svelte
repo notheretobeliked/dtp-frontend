@@ -2,8 +2,13 @@
 <script lang="ts">
     import LibraryPage from '../+page.svelte';
 	import type { PageData } from './$types'
-	export let data: PageData
+	interface Props {
+		data: PageData;
+		[key: string]: any
+	}
+
+	let { ...props }: Props = $props();
 
 </script>
 
-<LibraryPage {...$$props} />
+<LibraryPage {...props} />

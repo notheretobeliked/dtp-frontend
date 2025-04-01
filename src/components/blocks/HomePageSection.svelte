@@ -1,22 +1,28 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+	interface Props {
+		block: AcfHomePageSection;
+	}
+
+	let { block }: Props = $props();
 	let isUsingTouch = false
 	import { onMount } from 'svelte'
 	import { fade } from 'svelte/transition'
 	import type { AcfHomePageSection } from '$lib/graphql/generated'
-	export let block: AcfHomePageSection
 	const images = block.homePageSection?.images?.nodes ?? []
 	const link = block.homePageSection?.link?.url ?? ''
 	const content = block.innerBlocks ?? [] // Provide a default empty array
 	import BlockRenderer from '$components/BlockRenderer.svelte'
 	import Image from '$components/Image.svelte'
+
 	const totalImages = images.length
-	let showImages = false
-	let containerRef: HTMLDivElement
-	let isInitialized = false
-	let isLoading = false
+	let showImages = $state(false)
+	let containerRef: HTMLDivElement = $state()
+	let isInitialized = $state(false)
+	let isLoading = $state(false)
 	let imagesLoaded = false
 	const duplicatedImages = [...images, ...images]
-	let isMobile = false
+	let isMobile = $state(false)
 
 	const transformImageObject = (image: any) => {
 		return {
@@ -33,9 +39,9 @@
 	}
 
 	let headerHeight: number
-	let scrollInterval: ReturnType<typeof setInterval> | undefined
+	let scrollInterval: ReturnType<typeof setInterval> | undefined = $state()
 	let preloadedImages: HTMLImageElement[] = []
-	let isInitialPositionSet = false
+	let isInitialPositionSet = $state(false)
 
 	function updateIndex() {
 		if (!showImages) return
@@ -61,18 +67,22 @@
 		}
 	}
 
-	$: if (!showImages) {
-		isInitialPositionSet = false
-		if (scrollInterval) {
-			clearInterval(scrollInterval)
-			scrollInterval = undefined
+	run(() => {
+		if (!showImages) {
+			isInitialPositionSet = false
+			if (scrollInterval) {
+				clearInterval(scrollInterval)
+				scrollInterval = undefined
+			}
 		}
-	}
+	});
 
-	$: if (showImages && !isInitialized) {
-		isInitialized = true
-		requestAnimationFrame(updateIndex)
-	}
+	run(() => {
+		if (showImages && !isInitialized) {
+			isInitialized = true
+			requestAnimationFrame(updateIndex)
+		}
+	});
 
 	async function preloadImages() {
 		isLoading = true
@@ -164,8 +174,8 @@
 
 {#if content}
 	<div
-		on:mouseenter={toggleImages}
-		on:mouseleave={toggleImages}
+		onmouseenter={toggleImages}
+		onmouseleave={toggleImages}
 		aria-hidden="true"
 		class="group biglink {images.length === 0 ? 'py-6 md:py-12' : ''}"
 	>

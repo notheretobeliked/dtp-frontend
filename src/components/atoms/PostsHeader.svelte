@@ -1,9 +1,18 @@
 <script lang="ts">
-	export let slug: string | null = null
-	export let byline: string | null = null
-	export let date: string
-	export let title: string
 	import { language } from "$stores/language";
+	interface Props {
+		slug?: string | null;
+		byline?: string | null;
+		date: string;
+		title: string;
+	}
+
+	let {
+		slug = null,
+		byline = null,
+		date,
+		title
+	}: Props = $props();
 </script>
 
 <div class="mx-2 lg:mx-0">

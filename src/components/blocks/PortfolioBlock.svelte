@@ -1,23 +1,29 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { onMount, onDestroy } from 'svelte'
   import type { ACFPortfolioBlock, PortfolioItemNode } from '$lib/types/wp-types'
   import PortfolioItem from '$components/PortfolioItem.svelte'
   import Button from '$components/Button.svelte'
   import Masonry from 'svelte-bricks'
 
-  export let block: ACFPortfolioBlock
+  interface Props {
+    block: ACFPortfolioBlock;
+  }
+
+  let { block }: Props = $props();
   let items: PortfolioItemNode[] = block.portfolioBlock.portfolioItems.nodes
 
-  let minColWidth = 140 // Default value for mobile screens
+  let minColWidth = $state(140) // Default value for mobile screens
   let maxColWidth = 1200
   let gap = 30
 
   // Reactive statement to update minColWidth based on window width
-  $: {
+  run(() => {
     if (typeof window !== 'undefined') {
       minColWidth = window.innerWidth >= 768 ? 420 : 140 // 768px is a common breakpoint for iPads
     }
-  }
+  });
 
   // Resize listener to react to window size changes
   onMount(() => {
@@ -35,9 +41,11 @@
 </script>
 
 <div class="bg-black relative -mb-24">
-  <Masonry {items} {minColWidth} {maxColWidth} {gap} idKey="slug" let:item animate>
-    <PortfolioItem block={item} noLink />
-  </Masonry>
+  <Masonry {items} {minColWidth} {maxColWidth} {gap} idKey="slug"  animate>
+    {#snippet children({ item })}
+        <PortfolioItem block={item} noLink />
+          {/snippet}
+    </Masonry>
   <div class="absolute bottom-0 h-[100vh] w-full flex flex-col justify-end bg-gradient-to-t from-black to-transparent">
     <div class="flex justify-center">
       <Button textClass="text-xl" url="/portfolio" label="Explore the portfolio" />

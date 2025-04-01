@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { ACFServicePush, ServiceNode } from '$lib/types/wp-types'
-  export let block: ACFServicePush
   import BlockRenderer from '$components/BlockRenderer.svelte'
   import Image from '$components/Image.svelte'
+  interface Props {
+    block: ACFServicePush;
+  }
+
+  let { block }: Props = $props();
 
   const uri = block.servicePush.service.nodes[0].uri
   const colour = block.attributes.backgroundColor ?? 'transparent'

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { onMount } from 'svelte'
 
 	import { page } from '$app/stores'
@@ -7,29 +9,29 @@
 
 	import { language } from '$stores/language'
 
-	let showToast = false
+	let showToast = $state(false)
 
-	$: currentPagePath = $page.url.pathname
-	$: currentLanguage = currentPagePath.startsWith('/ar') ? 'ar' : 'en'
+	let currentPagePath = $derived($page.url.pathname)
+	let currentLanguage = $derived(currentPagePath.startsWith('/ar') ? 'ar' : 'en')
 
 	// Update the language path calculations
-	$: englishLanguagePath =
-		currentPagePath === '/ar/library'
+	let englishLanguagePath =
+		$derived(currentPagePath === '/ar/library'
 			? '/en/library'
 			: currentLanguage === 'ar' && $page.data.translations?.find((t) => t.languageCode === 'en')
 				? '/en' + $page.data.translations.find((t) => t.languageCode === 'en').uri
-				: '/en'
+				: '/en')
 
-	$: arabicLanguagePath =
-		currentPagePath === '/en/library'
+	let arabicLanguagePath =
+		$derived(currentPagePath === '/en/library'
 			? '/ar/library'
 			: currentLanguage === 'en' && $page.data.translations?.find((t) => t.languageCode === 'ar')
 				? '/ar' + $page.data.translations.find((t) => t.languageCode === 'ar').uri
-				: '/ar'
+				: '/ar')
 
 	// Add debug logging
 
-	let open: boolean = false
+	let open: boolean = $state(false)
 
 	async function handleShare() {
 		if (navigator.share) {
@@ -75,7 +77,7 @@
 	>
 		<div class="hidden lg:block relative">
 			<svg
-				on:click={handleShare}
+				onclick={handleShare}
 				class="cursor-pointer"
 				width="30"
 				height="30"
@@ -120,7 +122,7 @@
 				<a
 					class="{currentLanguage === 'en' ? 'hidden' : ''} lg:inline"
 					href={currentLanguage === 'en' ? currentPagePath : englishLanguagePath}
-					on:click={(e) =>
+					onclick={(e) =>
 						switchLanguage(e, currentLanguage === 'en' ? currentPagePath : englishLanguagePath)}
 					>English</a
 				>
@@ -128,7 +130,7 @@
 				<a
 					class="{currentLanguage === 'ar' ? 'hidden' : ''} lg:inline font-lyon"
 					href={currentLanguage === 'ar' ? currentPagePath : arabicLanguagePath}
-					on:click={(e) =>
+					onclick={(e) =>
 						switchLanguage(e, currentLanguage === 'ar' ? currentPagePath : arabicLanguagePath)}
 					>العربية</a
 				>
@@ -155,13 +157,13 @@
 			<li>
 				<a
 					href="/{currentLanguage}"
-					on:click|preventDefault={() => {
+					onclick={preventDefault(() => {
 						if (currentPagePath === `/${currentLanguage}`) {
 							open = false;
 						} else {
 							goto(`/${currentLanguage}`);
 						}
-					}}
+					})}
 					class="text-center"
 				>
 					<span class="block !font-manchette text-xl lg:text-2xl"> معرض </span>
@@ -173,13 +175,13 @@
 			<li>
 				<a
 					href="/{currentLanguage}/library"
-					on:click|preventDefault={() => {
+					onclick={preventDefault(() => {
 						if (currentPagePath === `/${currentLanguage}/library`) {
 							open = false;
 						} else {
 							goto(`/${currentLanguage}/library`);
 						}
-					}}
+					})}
 					class="text-center"
 				>
 					<span class="block !font-manchette text-xl lg:text-2xl">مكتبة </span>
@@ -191,14 +193,14 @@
 			<li>
 				<a
 					href={currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub'}
-					on:click|preventDefault={() => {
+					onclick={preventDefault(() => {
 						const path = currentLanguage === 'ar' ? '/ar/ghurfat-al-taallum' : '/en/learning-hub';
 						if (currentPagePath === path) {
 							open = false;
 						} else {
 							goto(path);
 						}
-					}}
+					})}
 					class="text-center"
 				>
 					<span class="block !font-manchette text-xl lg:text-2xl">مركز التعلّم</span>
@@ -210,14 +212,14 @@
 			<li>
 				<a
 					href={currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about'}
-					on:click|preventDefault={() => {
+					onclick={preventDefault(() => {
 						const path = currentLanguage === 'ar' ? '/ar/man-nahn' : '/en/about';
 						if (currentPagePath === path) {
 							open = false;
 						} else {
 							goto(path);
 						}
-					}}
+					})}
 					class="text-center"
 				>
 					<span class="block !font-manchette text-xl lg:text-2xl">من نحن </span>

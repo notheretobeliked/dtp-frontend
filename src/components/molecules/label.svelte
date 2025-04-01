@@ -12,11 +12,15 @@
 	import { labelTranslations } from '$stores/translations'
 	const duration = 300 // Duration of the slide animation in milliseconds
 
-	export let book: Book
-	export let lang: 'en' | 'ar' // Add this line to explicitly type lang
+	interface Props {
+		book: Book;
+		lang: 'en' | 'ar';
+	}
+
+	let { book, lang }: Props = $props();
 
 	const translations = get(labelTranslations)
-	let selectedImageIndex: number | null = null
+	let selectedImageIndex: number | null = $state(null)
 
 	interface LabelGroup {
 		label: string
@@ -131,7 +135,7 @@
 		return total > 1 && index < total - 1
 	}
 
-	let showImages: boolean = false
+	let showImages: boolean = $state(false)
 
 	const toggleImages = () => {
 		showImages = !showImages
@@ -160,9 +164,9 @@
 		}
 	}
 
-	let scrollContainer: HTMLDivElement
+	let scrollContainer: HTMLDivElement = $state()
 
-	let smallScreen = false
+	let smallScreen = $state(false)
 
 	onMount(() => {
 		const mediaQuery = window.matchMedia('(min-width: 1024px)')
@@ -256,8 +260,8 @@
 			<figure class="h-[220px] relative group">
 				{#if images.length > 1}
 					<button
-						on:click={toggleImages}
-						on:keydown={(e) => e.key === 'Enter' && toggleImages()}
+						onclick={toggleImages}
+						onkeydown={(e) => e.key === 'Enter' && toggleImages()}
 						class="cursor-pointer block relative w-full h-full"
 					>
 						<Image imageObject={book.thumbnailCoverImage} fit="contain" />
@@ -284,8 +288,8 @@
 					</button>
 				{:else}
 					<button
-						on:click={() => openOverlay(0)}
-						on:keydown={(e) => e.key === 'Enter' && openOverlay(0)}
+						onclick={() => openOverlay(0)}
+						onkeydown={(e) => e.key === 'Enter' && openOverlay(0)}
 						class="cursor-pointer relative w-full h-full flex items-center "
 					>
 						<Image imageObject={book.thumbnailCoverImage} fit="contain" />

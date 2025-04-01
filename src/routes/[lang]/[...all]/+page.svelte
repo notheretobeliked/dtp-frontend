@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { onMount } from 'svelte'
 	import type { EditorBlock } from '$lib/types/wp-types'
 	import BlockRenderer from '$components/BlockRenderer.svelte'
@@ -8,25 +10,21 @@
 	import { labelTranslations } from '$stores/translations'
 	import type { PageData } from './$types'
 	import { slide } from 'svelte/transition'
-	export let data: PageData
-	let editorBlocks: EditorBlock[],
-		uri: string,
-		isLearningHubSingle: boolean = false
-	let bgColour: string
-	let bgColourClass: string
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
+	let editorBlocks: EditorBlock[] = $state(),
+		uri: string = $state(),
+		isLearningHubSingle: boolean = $state(false)
+	let bgColour: string = $state()
+	let bgColourClass: string = $state()
 
 	let showFullContent = false
-	let visibleBlocks
-	let hiddenBlocks
+	let visibleBlocks = $state()
+	let hiddenBlocks = $state()
 	let headerHeight: number
-	$: {
-		bgColour = data.data.nodeByUri?.pageDesign?.bgColour?.slug || 'white-off'
-		bgColourClass = getBgColorClass(bgColour)
-		const readMoreIndex = editorBlocks?.findIndex((block) => block.name === 'core/read-more')
-		visibleBlocks = readMoreIndex === -1 ? editorBlocks : editorBlocks.slice(0, readMoreIndex)
-
-		hiddenBlocks = readMoreIndex === -1 ? [] : editorBlocks.slice(readMoreIndex + 1)
-	}
 
 	function getBgColorClass(color: string | null): string {
 		return color ? `bg-${color}` : 'bg-white-off'
@@ -43,30 +41,38 @@
 			.replace(/\//g, '.')
 	}
 
-	let selectedCategory: string | null = null
+	let selectedCategory: string | null = $state(null)
 
-	// Create a reactive filtered posts array
-	$: filteredPosts = selectedCategory
-		? data.learningHubPosts.filter((post) => post.category === selectedCategory)
-		: data.learningHubPosts
 
 	// Handle category selection
 	function handleCategorySelect(category: string | null) {
 		selectedCategory = category
 	}
 
-	let isHomePage: boolean = false
+	let isHomePage: boolean = $state(false)
 
-	$: {
-		;({ editorBlocks, uri, isLearningHubSingle } = data)
-		isHomePage = uri === '/' || uri === '/en' || uri === '/ar'
-	}
 
 	function handleReadMore() {
 		showFullContent = !showFullContent
 	}
 
 	let isHovering = false
+	run(() => {
+		;({ editorBlocks, uri, isLearningHubSingle } = data)
+		isHomePage = uri === '/' || uri === '/en' || uri === '/ar'
+	});
+	run(() => {
+		bgColour = data.data.nodeByUri?.pageDesign?.bgColour?.slug || 'white-off'
+		bgColourClass = getBgColorClass(bgColour)
+		const readMoreIndex = editorBlocks?.findIndex((block) => block.name === 'core/read-more')
+		visibleBlocks = readMoreIndex === -1 ? editorBlocks : editorBlocks.slice(0, readMoreIndex)
+
+		hiddenBlocks = readMoreIndex === -1 ? [] : editorBlocks.slice(readMoreIndex + 1)
+	});
+	// Create a reactive filtered posts array
+	let filteredPosts = $derived(selectedCategory
+		? data.learningHubPosts.filter((post) => post.category === selectedCategory)
+		: data.learningHubPosts)
 </script>
 
 <div

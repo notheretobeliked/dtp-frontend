@@ -1,23 +1,29 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { onMount } from 'svelte'
 	import type { ACFHomePageHero } from '$lib/types/wp-types'
-	export let block: ACFHomePageHero
 	const images = block.homePageHero.images.nodes
 	const content = block.children
 	import BlockRenderer from '$components/BlockRenderer.svelte'
 	import Image from '$components/Image.svelte'
+	interface Props {
+		block: ACFHomePageHero;
+	}
 
-	let y: number
-	let percentage: number = 100
+	let { block }: Props = $props();
+
+	let y: number = $state()
+	let percentage: number = $state(100)
 	let stopAnimationPoint: number
-	let pageHeight: number = 3000
-	let stopHeight: number = 3000
-	let stopped: boolean = false
-	let topStart: number = 0
+	let pageHeight: number = $state(3000)
+	let stopHeight: number = $state(3000)
+	let stopped: boolean = $state(false)
+	let topStart: number = $state(0)
 
-	let transformString: string
+	let transformString: string = $state()
 
-	let bgdiv: HTMLDivElement
+	let bgdiv: HTMLDivElement = $state()
 
 	onMount(() => {
 		pageHeight = 3000 + window.innerHeight
@@ -26,7 +32,7 @@
 		topStart = 3000 - window.innerHeight
 	})
 
-	$: {
+	run(() => {
 		percentage = 100 - (y / pageHeight) * 100
 		if (y > stopHeight) {
 			stopped = true
@@ -35,7 +41,7 @@
 		if (!stopped) {
 			transformString = `transform: scale(${percentage}%)`
 		} else transformString = `transform: scale(35%); position:absolute; top:${topStart}px`
-	}
+	});
 </script>
 
 <svelte:window bind:scrollY={y} />

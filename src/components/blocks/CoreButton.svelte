@@ -2,8 +2,13 @@
   import type { CoreButtonBlock } from '$lib/types/wp-types'
   import Button from '$components/Button.svelte'
 
-  // Expect a core/button block
-  export let block: CoreButtonBlock
+  
+  interface Props {
+    // Expect a core/button block
+    block: CoreButtonBlock;
+  }
+
+  let { block }: Props = $props();
   const classNames = (fontSize: string | null, textColor: string | null | undefined) => {
     let textClasses = '',
       colorClasses = textColor ? `text-${textColor}` : ''

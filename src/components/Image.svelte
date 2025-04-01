@@ -2,17 +2,28 @@
 	import type { ImageSizeData, Maybe } from '$lib/types/generated'
 	import { findImageSizeData, getSrcSet } from '$lib/utilities/utilities'
 
-	export let imageObject: {
+	interface Props {
+		imageObject: {
 		altText?: Maybe<string>
 		mediaDetails: {
 			sizes: ImageSizeData[]
 		}
+	};
+		lazy?: boolean;
+		imageSize?: keyof ImageSizeData;
+		fit?: 'cover' | 'contain' | 'fill' | 'none';
+		extraClasses?: string;
+		shadow?: boolean;
 	}
-	export let lazy: boolean = true
-	export let imageSize: keyof ImageSizeData = 'thumbnail'
-	export let fit: 'cover' | 'contain' | 'fill' | 'none' = 'none'
-	export let extraClasses: string = ''
-	export let shadow = false;
+
+	let {
+		imageObject,
+		lazy = true,
+		imageSize = 'thumbnail',
+		fit = 'none',
+		extraClasses = '',
+		shadow = false
+	}: Props = $props();
 	const src = findImageSizeData('sourceUrl', imageObject.mediaDetails.sizes, imageSize)
 	const width = findImageSizeData('width', imageObject.mediaDetails.sizes, imageSize)
 	const height = findImageSizeData('height', imageObject.mediaDetails.sizes, imageSize)
