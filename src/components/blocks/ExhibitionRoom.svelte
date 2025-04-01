@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { preventDefault } from 'svelte/legacy';
+	interface Props {
+		block: AcfExhibitionRoom
+	}
+
+	let { block }: Props = $props()
+
+	import { preventDefault } from 'svelte/legacy'
 
 	import { onDestroy, onMount } from 'svelte'
 	import type { AcfExhibitionRoom, MediaItem } from '$lib/graphql/generated'
@@ -118,11 +124,6 @@
 	}
 
 	import { fly } from 'svelte/transition'
-	interface Props {
-		block: AcfExhibitionRoom;
-	}
-
-	let { block }: Props = $props();
 
 	let infoDiv: HTMLElement
 	let isInfoOpen = $state(false)
@@ -168,7 +169,7 @@
 	}
 
 	function getImageOrientation(image: any): 'portrait' | 'landscape' | 'square' {
-		const largeSize = image?.mediaDetails?.sizes?.find(size => size?.name === 'large')
+		const largeSize = image?.mediaDetails?.sizes?.find((size) => size?.name === 'large')
 		if (!largeSize?.width || !largeSize?.height) return 'portrait' // Default
 
 		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
@@ -178,11 +179,11 @@
 	}
 
 	function getImageHeightClass(image: any, groupLayout: string): string {
-		const largeSize = image?.mediaDetails?.sizes?.find(size => size?.name === 'large')
+		const largeSize = image?.mediaDetails?.sizes?.find((size) => size?.name === 'large')
 		if (!largeSize?.width || !largeSize?.height) return 'h-[300px] lg:h-[430px]' // Default
-		
+
 		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
-		
+
 		if (groupLayout === 'organic-landscape') {
 			// If aspect ratio is less than 1.7:1, use smaller height
 			return aspectRatio < 1.7 ? 'h-[300px] lg:h-[430px]' : 'h-auto lg:h-[250px]'
@@ -191,6 +192,29 @@
 			return 'h-[300px] lg:h-[430px]'
 		}
 	}
+
+	
+	// Add this effect for each animation group
+	$effect(() => {
+		// For each animation section that needs to be started
+		const groups = block?.exhibitionRoom?.cabinets?.flatMap(c => 
+			c?.groups?.filter(g => g?.layout?.[0] === 'animation') ?? []
+		) ?? [];
+		
+		groups.forEach(group => {
+			if (group?.images?.nodes?.length && !animationInterval) {
+				startAnimation(group.images.nodes);
+			}
+		});
+		
+		// Cleanup when component unmounts
+		return () => {
+			if (animationInterval) {
+				clearInterval(animationInterval);
+				animationInterval = undefined;
+			}
+		};
+	});
 </script>
 
 <div class="w-full flex flex-row">
@@ -218,7 +242,7 @@
 					}}
 				/>
 			{/if}
-			{#if block?.exhibitionRoom?.nameEn  && $language != 'ar'}
+			{#if block?.exhibitionRoom?.nameEn && $language != 'ar'}
 				<CoreHeading
 					block={{
 						attributes: {
@@ -308,7 +332,8 @@
 																? 'scale-100 opacity-100 translate-y-0'
 																: 'scale-100 opacity-100 translate-y-0'}"
 														onclick={() => handleImageClick(image.reference)}
-														onkeydown={(e) => e.key === 'Enter' && handleImageClick(image.reference)}
+														onkeydown={(e) =>
+															e.key === 'Enter' && handleImageClick(image.reference)}
 														role="button"
 														tabindex="0"
 														class:cursor-pointer={image.reference}
@@ -334,11 +359,15 @@
 											{#if group.images?.nodes}
 												{#each group.images.nodes as image, i}
 													<div
-														class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200 {isInView
+														class="{getImageHeightClass(
+															image,
+															group.layout[0]
+														)} hover:scale-[101%] transition-all duration-200 {isInView
 															? 'scale-100 opacity-100 translate-y-0'
 															: 'scale-100 opacity-100 translate-y-0'}"
 														onclick={() => handleImageClick(image.reference)}
-														onkeydown={(e) => e.key === 'Enter' && handleImageClick(image.reference)}
+														onkeydown={(e) =>
+															e.key === 'Enter' && handleImageClick(image.reference)}
 														role="button"
 														tabindex="0"
 														class:cursor-pointer={image.reference}
@@ -376,7 +405,9 @@
 															transition:fade={{ duration: 200 }}
 															onclick={() =>
 																handleImageClick(group.images.nodes[currentImageIndex]?.reference)}
-															onkeydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[currentImageIndex]?.reference)}
+															onkeydown={(e) =>
+																e.key === 'Enter' &&
+																handleImageClick(group.images.nodes[currentImageIndex]?.reference)}
 															role="button"
 															tabindex="0"
 															class:cursor-pointer={group.images.nodes[currentImageIndex]
@@ -392,9 +423,6 @@
 														</div>
 													{/key}
 												</div>
-												{#if !animationInterval}
-													{@const _ = startAnimation(group.images.nodes)}
-												{/if}
 											{/if}
 										</div>
 									{/if}
@@ -405,9 +433,14 @@
 												<!-- First image -->
 												<div class="lg:col-span-2 flex justify-center">
 													<div
-														class="{getImageHeightClass(group.images.nodes[0], group.layout[0])} hover:scale-[101%] transition-all duration-200"
+														class="{getImageHeightClass(
+															group.images.nodes[0],
+															group.layout[0]
+														)} hover:scale-[101%] transition-all duration-200"
 														onclick={() => handleImageClick(group.images.nodes[0]?.reference)}
-														onkeydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[0]?.reference)}
+														onkeydown={(e) =>
+															e.key === 'Enter' &&
+															handleImageClick(group.images.nodes[0]?.reference)}
 														role="button"
 														tabindex="0"
 														class:cursor-pointer={group.images.nodes[0]?.reference}
@@ -425,9 +458,14 @@
 												{#if group.images.nodes.length === 2}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="{getImageHeightClass(group.images.nodes[1], group.layout[0])} hover:scale-[101%] transition-all duration-200"
+															class="{getImageHeightClass(
+																group.images.nodes[1],
+																group.layout[0]
+															)} hover:scale-[101%] transition-all duration-200"
 															onclick={() => handleImageClick(group.images.nodes[1]?.reference)}
-															onkeydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[1]?.reference)}
+															onkeydown={(e) =>
+																e.key === 'Enter' &&
+																handleImageClick(group.images.nodes[1]?.reference)}
 															role="button"
 															tabindex="0"
 															class:cursor-pointer={group.images.nodes[1]?.reference}
@@ -446,9 +484,13 @@
 														{#if i % 2 === 0}
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
 																<div
-																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(
+																		image,
+																		group.layout[0]
+																	)} hover:scale-[101%] transition-all duration-200"
 																	onclick={() => handleImageClick(image?.reference)}
-																	onkeydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
+																	onkeydown={(e) =>
+																		e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
 																	tabindex="0"
 																	class:cursor-pointer={image?.reference}
@@ -469,9 +511,13 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(
+																		image,
+																		group.layout[0]
+																	)} hover:scale-[101%] transition-all duration-200"
 																	onclick={() => handleImageClick(image?.reference)}
-																	onkeydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
+																	onkeydown={(e) =>
+																		e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
 																	tabindex="0"
 																	class:cursor-pointer={image?.reference}
@@ -495,9 +541,13 @@
 																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
 															>
 																<div
-																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(
+																		image,
+																		group.layout[0]
+																	)} hover:scale-[101%] transition-all duration-200"
 																	onclick={() => handleImageClick(image?.reference)}
-																	onkeydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
+																	onkeydown={(e) =>
+																		e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
 																	tabindex="0"
 																	class:cursor-pointer={image?.reference}
@@ -520,9 +570,13 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{getImageHeightClass(image, group.layout[0])} hover:scale-[101%] transition-all duration-200"
+																	class="{getImageHeightClass(
+																		image,
+																		group.layout[0]
+																	)} hover:scale-[101%] transition-all duration-200"
 																	onclick={() => handleImageClick(image?.reference)}
-																	onkeydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
+																	onkeydown={(e) =>
+																		e.key === 'Enter' && handleImageClick(image?.reference)}
 																	role="button"
 																	tabindex="0"
 																	class:cursor-pointer={image?.reference}
@@ -549,12 +603,19 @@
 													<!-- Final centered image (only if more than 3 images) -->
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="{getImageHeightClass(group.images.nodes[group.images.nodes.length - 1], group.layout[0])} hover:scale-[101%] transition-all duration-200"
+															class="{getImageHeightClass(
+																group.images.nodes[group.images.nodes.length - 1],
+																group.layout[0]
+															)} hover:scale-[101%] transition-all duration-200"
 															onclick={() =>
 																handleImageClick(
 																	group.images.nodes[group.images.nodes.length - 1]?.reference
 																)}
-															onkeydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[group.images.nodes.length - 1]?.reference)}
+															onkeydown={(e) =>
+																e.key === 'Enter' &&
+																handleImageClick(
+																	group.images.nodes[group.images.nodes.length - 1]?.reference
+																)}
 															role="button"
 															tabindex="0"
 															class:cursor-pointer={group.images.nodes[
@@ -582,7 +643,10 @@
 		{/if}
 	</div>
 	{#if isInfoOpen}
-		<div transition:fly={{ x: 500, duration: 800 }} class="fixed right-0 top-0 max-w-[500px] z-30 {$language === "ar" ? 'dir-rtl' : ''} ">
+		<div
+			transition:fly={{ x: 500, duration: 800 }}
+			class="fixed right-0 top-0 max-w-[500px] z-30 {$language === 'ar' ? 'dir-rtl' : ''} "
+		>
 			<button
 				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-40"
 				style="left: 0"
@@ -650,7 +714,8 @@
 							<a
 								href="#images-cabinet-{cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')}"
 								onclick={preventDefault((e) =>
-									handleCabinetLinkClick(e, cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')))}
+									handleCabinetLinkClick(e, cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_'))
+								)}
 							>
 								{#if cabinet.nameAr}
 									<CoreHeading
