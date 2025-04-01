@@ -19,8 +19,8 @@
 		{:else}
 			<h1 class="{$language === 'ar' ? 'font-manchette text-ar-lg md:text-ar-xl' : 'font-boogy text-lg md:text-xl' } text-center">{title}</h1>
 			<div class="grid grid-cols-2">
-				<p class="font-martina text-base w-full text-center">{byline}</p>
-				<p class="font-martina text-base w-full text-center">{date}</p>
+				<p class="{$language === 'ar' ? 'font-lyon text-ar-base' : 'font-martina text-base' } w-full text-center">{byline}</p>
+				<p class="{$language === 'ar' ? 'font-lyon text-ar-base' : 'font-martina text-base' } w-full text-center">{date}</p>
 			</div>
 		{/if}
 	</div>

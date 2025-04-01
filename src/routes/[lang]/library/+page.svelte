@@ -208,7 +208,7 @@
 				class="md:hidden w-full flex items-center justify-between px-2 py-1 bg-black text-white-pure border border-white rounded-md mb-2"
 				on:click={() => (isFilterOpen = !isFilterOpen)}
 			>
-				<span>{translations.filterBy?.[lang] || 'Filter by'}</span>
+				<span class="{lang === 'ar' ? 'text-ar-sm' : 'text-sm'}">{translations.filterBy?.[lang] || 'Filter by'}</span>
 				<svg
 					class="w-5 h-5 transition-transform {isFilterOpen ? 'rotate-180' : ''}"
 					fill="none"
@@ -234,7 +234,7 @@
 						<div
 							class="border-white border rounded-md p-2 {$filterStore.selectedArtist
 								? 'bg-white-off text-black'
-								: 'bg-black text-white-pure'} cursor-pointer text-sm relative flex items-center"
+								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
 							on:click={() => (artistsOpen = !artistsOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
@@ -260,10 +260,7 @@
 							>
 								{#each artists as artist}
 									<div
-										class="p-2 hover:bg-white-off hover:text-black cursor-pointer text-sm {$language ===
-										'ar'
-											? 'text-right font-lyon'
-											: 'font-martina'}"
+										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
 										on:click={() => {
 											updateFilter('selectedArtist', artist.slug)
 											artistsOpen = false
@@ -282,7 +279,7 @@
 						<div
 							class="border-white border rounded-md p-2 {$filterStore.selectedAuthor
 								? 'bg-white-off text-black'
-								: 'bg-black text-white-pure'} cursor-pointer text-sm relative flex items-center"
+								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
 							on:click={() => (authorsOpen = !authorsOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
@@ -307,10 +304,7 @@
 							>
 								{#each authors as author}
 									<div
-										class="p-2 hover:bg-white-off hover:text-black cursor-pointer text-sm {$language ===
-										'ar'
-											? 'text-right font-lyon'
-											: 'font-martina'}"
+										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
 										on:click={() => {
 											updateFilter('selectedAuthor', author.slug)
 											authorsOpen = false
@@ -329,7 +323,7 @@
 						<div
 							class="border-white border rounded-md p-2 {$filterStore.selectedPublisher
 								? 'bg-white-off text-black'
-								: 'bg-black text-white-pure'} cursor-pointer text-sm relative flex items-center"
+								: 'bg-black text-white-pure'} cursor-pointer relative flex items-center {lang === 'ar' ? 'text-ar-sm' : 'text-sm'}"
 							on:click={() => (publishersOpen = !publishersOpen)}
 						>
 							<span class="truncate {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
@@ -354,10 +348,7 @@
 							>
 								{#each publishers as publisher}
 									<div
-										class="p-2 hover:bg-white-off hover:text-black cursor-pointer text-sm {$language ===
-										'ar'
-											? 'text-right font-lyon'
-											: 'font-martina'}"
+										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
 										on:click={() => {
 											updateFilter('selectedPublisher', publisher.slug)
 											publishersOpen = false
@@ -374,10 +365,7 @@
 				<div class="grid grid-cols-2 gap-4">
 					<div class="relative">
 						<div
-							class="border-white border rounded-md p-2 cursor-pointer text-sm relative flex items-center {lang ===
-							'ar'
-								? 'text-right'
-								: ''} {$filterStore.yearFrom !== yearsAscending[0]
+							class="border-white border rounded-md p-2 cursor-pointer relative flex items-center {lang === 'ar' ? 'text-right text-ar-sm' : 'text-sm'} {$filterStore.yearFrom !== yearsAscending[0]
 								? 'bg-white-off text-black'
 								: 'bg-black'}"
 							on:click={() => (yearFromOpen = !yearFromOpen)}
@@ -402,10 +390,7 @@
 							>
 								{#each yearsAscending as year}
 									<div
-										class="p-2 hover:bg-white-off hover:text-black cursor-pointer text-sm {$language ===
-										'ar'
-											? 'text-right font-lyon'
-											: 'font-martina'}"
+										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
 										on:click={() => {
 											updateFilter('yearFrom', year)
 											if (parseInt(year) > parseInt($filterStore.yearTo)) {
@@ -423,10 +408,7 @@
 
 					<div class="relative">
 						<div
-							class="border-white border rounded-md p-2 cursor-pointer text-sm relative flex items-center {lang ===
-							'ar'
-								? 'text-right'
-								: ''} {$filterStore.yearTo !== yearsDescending[0]
+							class="border-white border rounded-md p-2 cursor-pointer relative flex items-center {lang === 'ar' ? 'text-right text-ar-sm' : 'text-sm'} {$filterStore.yearTo !== yearsDescending[0]
 								? 'bg-white-off text-black'
 								: 'bg-black'}"
 							on:click={() => (yearToOpen = !yearToOpen)}
@@ -450,10 +432,7 @@
 							>
 								{#each yearsDescending as year}
 									<div
-										class="p-2 hover:bg-white-off hover:text-black cursor-pointer text-sm {$language ===
-										'ar'
-											? 'text-right font-lyon'
-											: 'font-martina'}"
+										class="p-2 hover:bg-white-off hover:text-black cursor-pointer {$language === 'ar' ? 'text-right font-lyon text-ar-sm' : 'font-martina text-sm'}"
 										on:click={() => {
 											updateFilter('yearTo', year)
 											if (parseInt(year) < parseInt($filterStore.yearFrom)) {
@@ -476,9 +455,9 @@
 						bind:value={$filterStore.searchFilter}
 						on:input={(e) => updateFilter('searchFilter', e.currentTarget.value)}
 						placeholder={translations.search[lang]}
-						class="border-white border rounded-md p-2 bg-black w-full text-sm {lang === 'ar'
-							? 'text-right pr-2 pl-8 font-lyon'
-							: 'pl-2 pr-8 font-martina'}"
+						class="border-white border rounded-md p-2 bg-black w-full {lang === 'ar'
+							? 'text-right pr-2 pl-8 font-lyon text-ar-sm'
+							: 'pl-2 pr-8 font-martina text-sm'}"
 					/>
 					{#if $filterStore.searchFilter}
 						<button
