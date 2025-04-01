@@ -29,13 +29,14 @@ export default {
 		{
 			pattern: /^text-(xs|sm|base|lg|xl|2xl|3xl|4xl)$/, // matches all regular text sizes
 			variants: ['sm', 'md', 'lg', 'xl', '2xl']
-		},
+		}
 	],
 	theme: {
 		fontFamily: {
 			sans: ['Inter Tight'],
 			martina: ['Martina Plantijn'],
 			manchette: ['Manchette Fine'],
+			'manchette-ultralight': ['Manchette UltraLight'],
 			boogy: ['Boogy Brut Poster'],
 			'lyon-slanted': ['Lyon Arabic Slanted Text Web'],
 			lyon: ['Lyon Arabic Text Web']
