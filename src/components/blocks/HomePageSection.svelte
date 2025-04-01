@@ -15,8 +15,8 @@
 	let isInitialized = false
 	let isLoading = false
 	let imagesLoaded = false
-	import { language } from '$stores/language';
 	const duplicatedImages = [...images, ...images]
+	let isMobile = false
 
 	const transformImageObject = (image: any) => {
 		return {
@@ -102,7 +102,7 @@
 	}
 
 	const toggleImages = async () => {
-		if (isUsingTouch) return
+		if (isUsingTouch || isMobile) return
 		if (images.length === 0) return
 		
 		if (!showImages) {
@@ -128,6 +128,9 @@
 			headerHeight = header.clientHeight
 		}
 
+		// Check if device is mobile (width less than 768px)
+		isMobile = window.innerWidth < 768
+
 		// Add touch start listener to detect actual touch usage
 		document.addEventListener(
 			'touchstart',
@@ -145,6 +148,17 @@
 			},
 			{ once: true }
 		)
+
+		// Add resize listener to update isMobile
+		const handleResize = () => {
+			isMobile = window.innerWidth < 768
+		}
+		
+		window.addEventListener('resize', handleResize)
+		
+		return () => {
+			window.removeEventListener('resize', handleResize)
+		}
 	})
 </script>
 
@@ -155,7 +169,7 @@
 		aria-hidden="true"
 		class="group biglink {images.length === 0 ? 'py-6 md:py-12' : ''}"
 	>
-		<a href={link} class="block hover:scale-105 transition-all duration-300">
+		<a href={link} class="block {!isMobile ? 'hover:scale-105 transition-all duration-300' : ''}">
 			{#each content as block}
 				{#if block}
 					<BlockRenderer {block} />
