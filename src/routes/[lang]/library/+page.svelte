@@ -124,15 +124,22 @@
 				!$filterStore.selectedPublisher ||
 				(book.publisherFilterTerm?.split(' ') ?? []).includes($filterStore.selectedPublisher)
 
-			const yearFromMatch =
-				!$filterStore.yearFrom || // no minimum year selected
-				!book.year || // book has no year (should still show up)
-				book.year >= parseInt($filterStore.yearFrom)
-
-			const yearToMatch =
-				!$filterStore.yearTo || // no maximum year selected
-				!book.year || // book has no year (should still show up)
-				book.year <= parseInt($filterStore.yearTo)
+			// Check if date filter has been changed from default values
+			const yearFromChanged = $filterStore.yearFrom !== yearsAscending[0]
+			const yearToChanged = $filterStore.yearTo !== yearsDescending[0]
+			
+			// Handle date filtering:
+			// 1. If both filters are at default values, include all books (including those without dates)
+			// 2. If any date filter has changed, exclude books without dates
+			// 3. For books with dates, apply the normal range filtering
+			
+			if ((yearFromChanged || yearToChanged) && !book.year) {
+				// Date filter was changed and book has no date, exclude it
+				return false
+			}
+			
+			const yearFromMatch = !yearFromChanged || (book.year && book.year >= parseInt($filterStore.yearFrom))
+			const yearToMatch = !yearToChanged || (book.year && book.year <= parseInt($filterStore.yearTo))
 
 			const searchMatch =
 				!$filterStore.searchFilter ||
