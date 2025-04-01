@@ -33,8 +33,8 @@
 						if (largeSize?.width && largeSize?.height) {
 							const firstAspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
 
-							// Only check for landscape if first image is landscape
-							if (firstAspectRatio > 1) {
+							// More lenient check - consider images close to square (ratio > 0.9) as potential landscape books
+							if (firstAspectRatio > 0.9) {
 								// Check next two images if they exist
 								const nextImages = group.images.nodes.slice(1, 3) as MediaItem[]
 								const isLandscapeBook = nextImages.some((image) => {
@@ -43,8 +43,8 @@
 									)
 									if (imgLargeSize?.width && imgLargeSize?.height) {
 										const aspectRatio = parseInt(imgLargeSize.width) / parseInt(imgLargeSize.height)
-										// Much higher threshold for spread images
-										return aspectRatio > 1.8 // This means it's likely a true landscape book
+										// Lower threshold to detect more books as landscape
+										return aspectRatio > 1.3 // Less restrictive than 1.8
 									}
 									return false
 								})
@@ -296,7 +296,7 @@
 
 									{#if group.layout[0] === 'centered'}
 										<div
-											class="flex flex-col gap-[200px] mb-100 lg:mb-[200px] items-center layout-centered"
+											class="flex flex-col gap-[200px] mb-[100px] lg:mb-[200px] items-center layout-centered"
 											use:inview={options}
 											on:inview_change={handleChange}
 										>
@@ -375,7 +375,7 @@
 												<div class="lg:col-span-2 flex justify-center">
 													<div
 														class="{group.layout[0] === 'organic-landscape'
-															? 'h-[250px]'
+															? 'h-[200px]'
 															: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 														on:click={() => handleImageClick(group.images.nodes[0]?.reference)}
 														on:keydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[0]?.reference)}
@@ -397,7 +397,7 @@
 													<div class="lg:col-span-2 flex justify-center">
 														<div
 															class="lg:mt-[50px] {group.layout[0] === 'organic-landscape'
-																? 'h-[250px]'
+																? 'h-auto lg:h-[250px]'
 																: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 															on:click={() => handleImageClick(group.images.nodes[1]?.reference)}
 															on:keydown={(e) => e.key === 'Enter' && handleImageClick(group.images.nodes[1]?.reference)}
@@ -420,7 +420,7 @@
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
 																<div
 																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-[250px]'
+																		? 'h-auto lg:h-[250px]'
 																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
@@ -445,7 +445,7 @@
 															>
 																<div
 																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-[250px]'
+																		? 'h-auto lg:h-[250px]'
 																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
@@ -473,7 +473,7 @@
 															>
 																<div
 																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-[250px]'
+																		? 'h-auto lg:h-[250px]'
 																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
@@ -500,7 +500,7 @@
 															>
 																<div
 																	class="{group.layout[0] === 'organic-landscape'
-																		? 'h-[250px]'
+																		? 'h-auto lg:h-[250px]'
 																		: 'h-[300px] lg:h-[430px]'} hover:scale-[101%] transition-all duration-200"
 																	on:click={() => handleImageClick(image?.reference)}
 																	on:keydown={(e) => e.key === 'Enter' && handleImageClick(image?.reference)}
