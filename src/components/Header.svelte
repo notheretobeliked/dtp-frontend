@@ -110,7 +110,7 @@
 			class="flex flew-row gap-4 lg:gap-0 lg:grid lg:grid-cols-3 items-center h-full px-4 w-full max-w-screen-xl mx-auto text-black"
 		>
 			<h1
-				class="font-boogy text-md lg:text-lg whitespace-nowrap text-black {currentLanguage === 'ar'
+				class="font-boogy text-md md:text-lg whitespace-nowrap text-black {currentLanguage === 'ar'
 					? 'hidden lg:inline'
 					: ''}"
 			>

@@ -69,6 +69,9 @@ export const classNames = (
 		case 'manchette':
 			fontClasses = 'font-manchette'
 			break
+		case 'manchette-ultralight':
+			fontClasses = 'font-manchette-ultralight'
+			break
 		case 'boogy':
 			fontClasses = 'font-boogy'
 			break

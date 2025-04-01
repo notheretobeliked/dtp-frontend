@@ -179,7 +179,7 @@
 		
 		if (groupLayout === 'organic-landscape') {
 			// If aspect ratio is less than 1.7:1, use smaller height
-			return aspectRatio < 1.7 ? 'h-[200px]' : 'h-auto lg:h-[250px]'
+			return aspectRatio < 1.7 ? 'h-[300px] lg:h-[430px]' : 'h-auto lg:h-[250px]'
 		} else {
 			// In normal organic layout, use the original heights
 			return 'h-[300px] lg:h-[430px]'
