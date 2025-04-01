@@ -62,7 +62,6 @@
 		isHomePage = uri === '/' || uri === '/en' || uri === '/ar'
 	}
 
-
 	function handleReadMore() {
 		showFullContent = !showFullContent
 	}
@@ -71,33 +70,22 @@
 </script>
 
 <div
-	class="{isHomePage ? 'pt-[56px] pb-0' : 'pt-24' } min-h-screen {bgColourClass} {isHomePage ? 'homepage' : ''} {$language === 'ar' ? 'dir-rtl' : ''}"
+	class="{isHomePage ? 'pt-[56px] pb-0' : 'pt-24'} min-h-screen {bgColourClass} {isHomePage
+		? 'homepage'
+		: ''} {$language === 'ar' ? 'dir-rtl' : ''}"
 >
 	{#if isLearningHubSingle}
 		<div class="w-full max-w-screen-md mx-auto !px-0">
 			<div class="w-full mb-3 h-5 flex content-center">
-				<div 
-					class="w-full mb-3"
-					on:mouseenter={() => isHovering = true}
-					on:mouseleave={() => isHovering = false}
-				>
-					{#if !isHovering}
-						<a
-							transition:slide
-							class="{$language === 'en' ? 'font-martina ' : 'font-lyon'} text-base text-center w-full block mb-3"
-							href="/{data.lang}/{data.learningHubSlug}"
-						>
-							{$labelTranslations.learninghub[$language]}
-						</a>
-					{:else}
-						<a
-							transition:slide
-							class="{$language === 'en' ? 'font-martina ' : 'font-lyon'} text-base text-center w-full block mb-3"
-							href="/{data.lang}/{data.learningHubSlug}"
-						>
-							{$labelTranslations.backtolearninghub[$language]}
-						</a>
-					{/if}
+				<div class="w-full mb-3">
+					<a
+						class="{$language === 'en'
+							? 'font-martina '
+							: 'font-lyon'} text-base text-center w-full block mb-3"
+						href="/{data.lang}/{data.learningHubSlug}"
+					>
+						{$labelTranslations.learninghub[$language]}
+					</a>
 				</div>
 			</div>
 			<PostsHeader
