@@ -208,7 +208,7 @@
 			{#if lang === 'en'}<h1 class="text-center text-2xl !font-boogy">Library</h1>{/if}
 		</header>
 		<div
-			class="{isSticky ? 'fixed' : ''} bg-black py-3 top-[--header-height] left-0 right-0 px-3 md:px-0 z-40 mb-8"
+			class="{isSticky ? 'fixed' : ''} bg-black py-3 top-[--header-height] left-0 right-0 px-3 md:px-0 z-30 mb-8"
 			bind:this={filterContainer}
 		>
 			<!-- Mobile Filter Toggle -->
