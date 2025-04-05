@@ -114,11 +114,11 @@
 			class="flex flew-row gap-4 lg:gap-0 lg:grid lg:grid-cols-3 items-center h-full px-4 w-full max-w-screen-xl mx-auto text-black"
 		>
 			<h1
-				class="font-boogy text-md md:text-lg whitespace-nowrap text-black {currentLanguage === 'ar'
+				class="font-boogy text-[1.1rem] md:text-lg whitespace-nowrap text-black {currentLanguage === 'ar'
 					? 'hidden lg:inline'
 					: ''}"
 			>
-				<a href="/en" class="">Decolonizing the page</a>
+				<a href="/en">Decolonizing the page</a>
 			</h1>
 			<div
 				class="language-switcher {currentLanguage === 'en'
@@ -142,12 +142,12 @@
 				>
 			</div>
 			<h1
-				class="text-right whitespace-nowrap z-30 !font-manchette font-extrabold text-lg text-black {currentLanguage ===
+				class="text-right whitespace-nowrap z-30 !font-manchette font-extrabold text-[1.2rem] md:text-lg text-black {currentLanguage ===
 				'en'
 					? 'hidden lg:inline'
 					: ''}"
 			>
-				<a href="/ar">جماليّات التحرّر</a>
+				<a href="/ar" class="">جماليّات التحرّر</a>
 			</h1>
 		</div>
 		<div class="" style="--padding:0"><Hamburger ariaControls="nav" --layer-height="1.5px" bind:open /></div>

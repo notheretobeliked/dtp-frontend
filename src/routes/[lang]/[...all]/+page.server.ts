@@ -25,7 +25,7 @@ export const load: PageServerLoad = async function load({ params, url, fetch }) 
 	const uri = `/${params.all || ''}`
 
 	// Add check for file extensions that shouldn't be handled by the page route
-	if (uri.match(/\.(woff2|jpg|png|gif|svg|css|js)$/i)) {
+	if (uri.match(/\.(woff2|jpg|png|gif|svg|css|js|json)$/i)) {
 		throw error(404, {
 			message: 'Not a page route'
 		})
