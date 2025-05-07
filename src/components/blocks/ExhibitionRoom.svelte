@@ -215,6 +215,81 @@
 			}
 		};
 	});
+
+	// Image height normalization for organic-landscape layout
+	let normalizedGroups = $state<Record<string, boolean>>({});
+	let groupHeights = $state<Record<string, number>>({});
+	
+	function getGroupId(cabinetIndex: number, groupIndex: number): string {
+		return `cabinet${cabinetIndex}_group${groupIndex}`;
+	}
+	
+	// Helper function to get aspect ratio from image
+	function getImageAspectRatio(image: any): number {
+		const largeSize = image?.mediaDetails?.sizes?.find((size: any) => size?.name === 'large');
+		if (!largeSize?.width || !largeSize?.height) return 1; // Default to square if no dimensions
+		return parseInt(largeSize.width) / parseInt(largeSize.height);
+	}
+	
+	// Setup to normalize image heights - using DOM measurements
+	onMount(() => {
+		// Set a small delay to ensure DOM is fully rendered
+		setTimeout(() => {
+			if (!block?.exhibitionRoom?.cabinets) return;
+			
+			// For all cabinets and groups
+			block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
+				if (!cabinet?.groups) return;
+				
+				cabinet.groups.forEach((group, groupIndex) => {
+					// Only process organic-landscape layouts
+					if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return;
+					
+					const groupKey = getGroupId(cabinetIndex, groupIndex);
+					
+					// First find all container elements for this group
+					const containers = document.querySelectorAll(`.group-${groupKey} .img-container`);
+					if (containers.length === 0) return;
+					
+					// Calculate heights based on actual container widths and image aspect ratios
+					const calculatedHeights: number[] = [];
+					
+					containers.forEach((container, i) => {
+						// The image aspect ratio (from media details)
+						if (!group?.images?.nodes) return;
+                        
+						const imageIndex = i === containers.length - 1 && containers.length > 3 
+							? group.images.nodes.length - 1  // Last image in group with 4+ images
+							: i === 0 ? 0 : (i < 3 ? i : i - 1); // First image is 0, adjust indices for others
+							
+						const image = group.images.nodes[imageIndex];
+						const aspectRatio = getImageAspectRatio(image);
+						
+						// Get the actual rendered width of the container
+						const containerWidth = container.clientWidth;
+						
+						// Calculate expected height at this width
+						const expectedHeight = containerWidth / aspectRatio;
+						calculatedHeights.push(expectedHeight);
+					});
+					
+					// Find the smallest height in the group (this will be applied to all)
+					if (calculatedHeights.length > 0) {
+						// Use smallest height from calculations
+						const minHeight = Math.min(...calculatedHeights);
+						
+						// Store for use in template
+						groupHeights[groupKey] = minHeight;
+						
+						// Mark group as ready to display with a small delay
+						setTimeout(() => {
+							normalizedGroups[groupKey] = true;
+						}, 100);
+					}
+				});
+			});
+		}, 200); // Small delay to ensure all elements are rendered
+	});
 </script>
 
 <div class="w-full flex flex-row">
@@ -428,15 +503,24 @@
 									{/if}
 
 									{#if group.layout[0] === 'organic' || group.layout[0] === 'organic-landscape'}
-										<div class="lg:grid lg:grid-cols-2 gap-4 mb-[200px] layout-{group.layout[0]}">
+										<div 
+											class="lg:grid lg:grid-cols-2 gap-4 mb-[200px] layout-{group.layout[0]} group-{getGroupId(cabinetIndex, groupIndex)} transition-opacity duration-500" 
+											class:invisible={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
+											class:opacity-0={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
+											class:opacity-100={group.layout[0] !== 'organic-landscape' || normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
+										>
 											{#if group.images?.nodes?.length > 0}
 												<!-- First image -->
 												<div class="lg:col-span-2 flex justify-center">
 													<div
-														class="{getImageHeightClass(
-															group.images.nodes[0],
-															group.layout[0]
-														)} hover:scale-[101%] transition-all duration-200"
+														class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+															group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																? ''
+																: getImageHeightClass(group.images.nodes[0], group.layout[0])
+														}`}
+														style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+															? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+															: ''}
 														onclick={() => handleImageClick(group.images.nodes[0]?.reference)}
 														onkeydown={(e) =>
 															e.key === 'Enter' &&
@@ -445,11 +529,11 @@
 														tabindex="0"
 														class:cursor-pointer={group.images.nodes[0]?.reference}
 													>
-														<Image
-															imageObject={group.images.nodes[0]}
-															imageSize="large"
-															fit="contain"
-															shadow={group.shadow}
+														<img 
+															src={group.images.nodes[0]?.sourceUrl}
+															alt={group.images.nodes[0]?.altText || ''}
+															style="height: 100%; width: auto; object-fit: contain;"
+															class="img-content"
 														/>
 													</div>
 												</div>
@@ -458,10 +542,14 @@
 												{#if group.images.nodes.length === 2}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="{getImageHeightClass(
-																group.images.nodes[1],
-																group.layout[0]
-															)} hover:scale-[101%] transition-all duration-200"
+															class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																	? ''
+																	: getImageHeightClass(group.images.nodes[1], group.layout[0])
+															}`}
+															style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																: ''}
 															onclick={() => handleImageClick(group.images.nodes[1]?.reference)}
 															onkeydown={(e) =>
 																e.key === 'Enter' &&
@@ -470,11 +558,11 @@
 															tabindex="0"
 															class:cursor-pointer={group.images.nodes[1]?.reference}
 														>
-															<Image
-																imageObject={group.images.nodes[1]}
-																imageSize="large"
-																fit="contain"
-																shadow={group.shadow}
+															<img 
+																src={group.images.nodes[1]?.sourceUrl}
+																alt={group.images.nodes[1]?.altText || ''}
+																style="height: 100%; width: auto; object-fit: contain;"
+																class="img-content"
 															/>
 														</div>
 													</div>
@@ -484,22 +572,26 @@
 														{#if i % 2 === 0}
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
 																<div
-																	class="{getImageHeightClass(
-																		image,
-																		group.layout[0]
-																	)} hover:scale-[101%] transition-all duration-200"
-																	onclick={() => handleImageClick(image?.reference)}
+																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																			? ''
+																			: getImageHeightClass(image as any, group.layout[0])
+																	}`}
+																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																		: ''}
+																	onclick={() => handleImageClick((image as any)?.reference)}
 																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick(image?.reference)}
+																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
 																	role="button"
 																	tabindex="0"
-																	class:cursor-pointer={image?.reference}
+																	class:cursor-pointer={(image as any)?.reference}
 																>
-																	<Image
-																		imageObject={image}
-																		imageSize="large"
-																		fit="contain"
-																		shadow={group.shadow}
+																	<img 
+																		src={(image as any)?.sourceUrl}
+																		alt={(image as any)?.altText || ''}
+																		style="height: 100%; width: auto; object-fit: contain;"
+																		class="img-content"
 																	/>
 																</div>
 															</div>
@@ -511,22 +603,26 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{getImageHeightClass(
-																		image,
-																		group.layout[0]
-																	)} hover:scale-[101%] transition-all duration-200"
-																	onclick={() => handleImageClick(image?.reference)}
+																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																			? ''
+																			: getImageHeightClass(image as any, group.layout[0])
+																	}`}
+																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																		: ''}
+																	onclick={() => handleImageClick((image as any)?.reference)}
 																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick(image?.reference)}
+																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
 																	role="button"
 																	tabindex="0"
-																	class:cursor-pointer={image?.reference}
+																	class:cursor-pointer={(image as any)?.reference}
 																>
-																	<Image
-																		shadow={group.shadow}
-																		imageObject={image}
-																		imageSize="large"
-																		fit="contain"
+																	<img 
+																		src={(image as any)?.sourceUrl}
+																		alt={(image as any)?.altText || ''}
+																		style="height: 100%; width: auto; object-fit: contain;"
+																		class="img-content"
 																	/>
 																</div>
 															</div>
@@ -541,22 +637,26 @@
 																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
 															>
 																<div
-																	class="{getImageHeightClass(
-																		image,
-																		group.layout[0]
-																	)} hover:scale-[101%] transition-all duration-200"
-																	onclick={() => handleImageClick(image?.reference)}
+																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																			? ''
+																			: getImageHeightClass(image as any, group.layout[0])
+																	}`}
+																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																		: ''}
+																	onclick={() => handleImageClick((image as any)?.reference)}
 																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick(image?.reference)}
+																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
 																	role="button"
 																	tabindex="0"
-																	class:cursor-pointer={image?.reference}
+																	class:cursor-pointer={(image as any)?.reference}
 																>
-																	<Image
-																		shadow={group.shadow}
-																		imageObject={image}
-																		imageSize="large"
-																		fit="contain"
+																	<img 
+																		src={(image as any)?.sourceUrl}
+																		alt={(image as any)?.altText || ''}
+																		style="height: 100%; width: auto; object-fit: contain;"
+																		class="img-content"
 																	/>
 																</div>
 															</div>
@@ -570,22 +670,26 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class="{getImageHeightClass(
-																		image,
-																		group.layout[0]
-																	)} hover:scale-[101%] transition-all duration-200"
-																	onclick={() => handleImageClick(image?.reference)}
+																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																			? ''
+																			: getImageHeightClass(image as any, group.layout[0])
+																	}`}
+																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																		: ''}
+																	onclick={() => handleImageClick((image as any)?.reference)}
 																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick(image?.reference)}
+																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
 																	role="button"
 																	tabindex="0"
-																	class:cursor-pointer={image?.reference}
+																	class:cursor-pointer={(image as any)?.reference}
 																>
-																	<Image
-																		shadow={group.shadow}
-																		imageObject={image}
-																		imageSize="large"
-																		fit="contain"
+																	<img 
+																		src={(image as any)?.sourceUrl}
+																		alt={(image as any)?.altText || ''}
+																		style="height: 100%; width: auto; object-fit: contain;"
+																		class="img-content"
 																	/>
 																</div>
 															</div>
@@ -603,10 +707,14 @@
 													<!-- Final centered image (only if more than 3 images) -->
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class="{getImageHeightClass(
-																group.images.nodes[group.images.nodes.length - 1],
-																group.layout[0]
-															)} hover:scale-[101%] transition-all duration-200"
+															class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																	? ''
+																	: getImageHeightClass(group.images.nodes[group.images.nodes.length - 1], group.layout[0])
+															}`}
+															style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
+																? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
+																: ''}
 															onclick={() =>
 																handleImageClick(
 																	group.images.nodes[group.images.nodes.length - 1]?.reference
@@ -622,11 +730,11 @@
 																group.images.nodes.length - 1
 															]?.reference}
 														>
-															<Image
-																imageObject={group.images.nodes[group.images.nodes.length - 1]}
-																imageSize="large"
-																fit="contain"
-																shadow={group.shadow}
+															<img 
+																src={group.images.nodes[group.images.nodes.length - 1]?.sourceUrl}
+																alt={group.images.nodes[group.images.nodes.length - 1]?.altText || ''}
+																style="height: 100%; width: auto; object-fit: contain;"
+																class="img-content"
 															/>
 														</div>
 													</div>
