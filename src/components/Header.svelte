@@ -152,7 +152,9 @@
 		</div>
 		<div class="" style="--padding:0"><Hamburger ariaControls="nav" --layer-height="1.5px" bind:open /></div>
 	</div>
-	<nav class="w-full flex px-4 pt-4 justify-between items-center h-12 md:h-24">
+	<nav class="w-full flex px-4 pt-4 justify-between items-center h-12 md:h-24 {open
+				? 'flex'
+				: 'hidden'}">
 		<ul
 			role="navigation"
 			aria-label="Main"
