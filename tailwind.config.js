@@ -5,6 +5,7 @@ export default {
 		'!mb-0',
 		'!gap-0',
 		'md:grid-cols-2',
+		'lowercase',
 		'md:grid-cols-3',
 		'object-cover',
 		'object-fit',
