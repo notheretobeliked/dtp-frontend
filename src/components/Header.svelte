@@ -103,7 +103,7 @@
 
 			{#if showToast}
 				<div
-					class="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-black text-white text-sm py-1 px-2 rounded whitespace-nowrap"
+					class="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-green text-black text-sm py-1 px-2 rounded-xl whitespace-nowrap"
 				>
 					URL Copied to clipboard
 				</div>

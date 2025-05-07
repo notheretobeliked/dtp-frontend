@@ -777,7 +777,7 @@
 			class="fixed right-0 top-0 max-w-[500px] z-30 {$language === 'ar' ? 'dir-rtl' : ''} "
 		>
 			<button
-				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-40"
+				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-30"
 				style="left: 0"
 				onclick={toggleInfo}
 			>
@@ -890,7 +890,7 @@
 	{:else}
 		<div transition:fly={{ x: 500, duration: 500 }}>
 			<button
-				class="fixed top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-40"
+				class="fixed top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 3-40"
 				style="right: 0px"
 				onclick={toggleInfo}
 			>

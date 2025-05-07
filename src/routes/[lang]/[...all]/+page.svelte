@@ -85,7 +85,7 @@
 			<div class="w-full mb-3 h-5 flex content-center">
 				<div class="w-full mb-3">
 					<a
-						class="{$language === 'en'
+						class="cursor-pointer {$language === 'en'
 							? 'font-martina '
 							: 'font-lyon'} text-base text-center w-full block mb-3"
 						href="/{data.lang}/{data.learningHubSlug}"
