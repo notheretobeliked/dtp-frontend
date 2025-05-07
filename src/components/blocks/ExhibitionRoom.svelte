@@ -28,6 +28,23 @@
 				cabinet.groups?.forEach((group) => {
 					if (!group || !group.layout) return
 
+					// Add aspect ratio to each image for reuse
+					if (group.images?.nodes?.length) {
+						group.images.nodes.forEach((image: any) => {
+							if (!image) return;
+							const largeSize = image.mediaDetails?.sizes?.find(
+								(size: any) => size && size.name === 'large'
+							);
+							if (largeSize?.width && largeSize?.height) {
+								// Store aspect ratio on the image object
+								image.aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height);
+							} else {
+								// Default to square if no dimensions
+								image.aspectRatio = 1;
+							}
+						});
+					}
+
 					if (group?.layout[0] === 'organic' && group.images?.nodes?.[0]) {
 						// Skip landscape check if there are only 2 images
 						if (group.images.nodes.length <= 2) return
@@ -168,28 +185,39 @@
 		console.log('Set active book reference:', reference)
 	}
 
-	function getImageOrientation(image: any): 'portrait' | 'landscape' | 'square' {
-		const largeSize = image?.mediaDetails?.sizes?.find((size) => size?.name === 'large')
-		if (!largeSize?.width || !largeSize?.height) return 'portrait' // Default
-
-		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
-		if (aspectRatio > 1.1) return 'landscape'
-		if (aspectRatio < 0.9) return 'portrait'
-		return 'square' // For images that are approximately square
+	// Helper function to get aspect ratio from image - now uses cached value if available
+	function getImageAspectRatio(image: any): number {
+		// Return cached aspect ratio if available
+		if (image.aspectRatio) return image.aspectRatio;
+		
+		// Otherwise calculate it
+		const largeSize = image?.mediaDetails?.sizes?.find((size: any) => size?.name === 'large');
+		if (!largeSize?.width || !largeSize?.height) return 1; // Default to square if no dimensions
+		
+		// Store for future use
+		image.aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height);
+		return image.aspectRatio;
 	}
-
+	
+	// Replaced getImageOrientation function to use cached aspect ratio
+	function getImageOrientation(image: any): 'portrait' | 'landscape' | 'square' {
+		const aspectRatio = getImageAspectRatio(image);
+		
+		if (aspectRatio > 1.1) return 'landscape';
+		if (aspectRatio < 0.9) return 'portrait';
+		return 'square'; // For images that are approximately square
+	}
+	
+	// Also update the getImageHeightClass function to use the cached aspect ratio
 	function getImageHeightClass(image: any, groupLayout: string): string {
-		const largeSize = image?.mediaDetails?.sizes?.find((size) => size?.name === 'large')
-		if (!largeSize?.width || !largeSize?.height) return 'h-[300px] lg:h-[430px]' // Default
-
-		const aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
+		const aspectRatio = getImageAspectRatio(image);
 
 		if (groupLayout === 'organic-landscape') {
 			// If aspect ratio is less than 1.7:1, use smaller height
-			return aspectRatio < 1.7 ? 'h-[300px] lg:h-[430px]' : 'h-auto lg:h-[250px]'
+			return aspectRatio < 1.7 ? 'h-[300px] lg:h-[430px]' : 'h-auto lg:h-[250px]';
 		} else {
 			// In normal organic layout, use the original heights
-			return 'h-[300px] lg:h-[430px]'
+			return 'h-[300px] lg:h-[430px]';
 		}
 	}
 
@@ -222,13 +250,6 @@
 	
 	function getGroupId(cabinetIndex: number, groupIndex: number): string {
 		return `cabinet${cabinetIndex}_group${groupIndex}`;
-	}
-	
-	// Helper function to get aspect ratio from image
-	function getImageAspectRatio(image: any): number {
-		const largeSize = image?.mediaDetails?.sizes?.find((size: any) => size?.name === 'large');
-		if (!largeSize?.width || !largeSize?.height) return 1; // Default to square if no dimensions
-		return parseInt(largeSize.width) / parseInt(largeSize.height);
 	}
 	
 	// Setup to normalize image heights - using DOM measurements
@@ -264,9 +285,9 @@
 							
 						const image = group.images.nodes[imageIndex];
 						const aspectRatio = getImageAspectRatio(image);
-						
 						// Get the actual rendered width of the container
-						const containerWidth = container.clientWidth;
+						const containerWidth = container.offsetWidth;
+						console.log(containerWidth)
 						
 						// Calculate expected height at this width
 						const expectedHeight = containerWidth / aspectRatio;
@@ -513,7 +534,7 @@
 												<!-- First image -->
 												<div class="lg:col-span-2 flex justify-center">
 													<div
-														class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+														class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 															group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																? ''
 																: getImageHeightClass(group.images.nodes[0], group.layout[0])
@@ -542,7 +563,7 @@
 												{#if group.images.nodes.length === 2}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																	? ''
 																	: getImageHeightClass(group.images.nodes[1], group.layout[0])
@@ -572,7 +593,7 @@
 														{#if i % 2 === 0}
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
 																<div
-																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -603,7 +624,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -637,7 +658,7 @@
 																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
 															>
 																<div
-																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -670,7 +691,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -707,7 +728,7 @@
 													<!-- Final centered image (only if more than 3 images) -->
 													<div class="lg:col-span-2 flex justify-center">
 														<div
-															class={`hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
 																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																	? ''
 																	: getImageHeightClass(group.images.nodes[group.images.nodes.length - 1], group.layout[0])
