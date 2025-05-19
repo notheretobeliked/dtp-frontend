@@ -591,9 +591,9 @@
 												{:else if group.images.nodes.length === 3}
 													{#each group.images.nodes.slice(1) as image, i}
 														{#if i % 2 === 0}
-															<div class="lg:col-start-1 lg:row-span-2 flex justify-end">
+															<div class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end">
 																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-end ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -624,7 +624,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-start ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -658,7 +658,7 @@
 																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
 															>
 																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-end ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
@@ -691,7 +691,7 @@
 																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
 															>
 																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
+																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-start ${
 																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
 																			? ''
 																			: getImageHeightClass(image as any, group.layout[0])
