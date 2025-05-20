@@ -28,7 +28,7 @@
 	
 	// Make classes reactive
 	const headingClasses = $derived(classNames(
-		fontSize || (level === 1 ? '2xl' : level === 4 ? 'xs' : 'base'),
+		fontSize || (level === 1 ? '2xl' : level === 4 ? 'xs' : level === 3 ? 'base-lg' : level === 4 ? 'xs' : 'base'),
 		textColor || '',
 		finalAlign || 'left',
 		fontFamilyForLevel,

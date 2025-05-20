@@ -40,6 +40,9 @@ export const classNames = (
 		case 'base':
 			sizeClasses = `text-${prefix}base`
 			break
+		case 'base-lg':
+			sizeClasses = `text-${prefix}baselg`
+			break
 		case 'lg':
 			sizeClasses = `text-${prefix}base md:text-${prefix}lg`
 			break
