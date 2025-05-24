@@ -5,10 +5,34 @@ export const findImageSizeData = (
 	sizes: ImageSize[],
 	name: string
 ): string => {
-	const size = sizes.find((size) => size.name === name)
+	if (!sizes || !Array.isArray(sizes) || sizes.length === 0) {
+		return ''
+	}
+
+	// First try to find the exact size requested
+	const size = sizes.find((size) => size?.name === name)
 	if (size && property in size) {
 		return String(size[property])
 	}
+
+	// Then try thumbnail as a fallback
+	const thumbnail = sizes.find((size) => size?.name === 'thumbnail')
+	if (thumbnail && property in thumbnail) {
+		return String(thumbnail[property])
+	}
+
+	// If neither requested size nor thumbnail found, get the largest size available
+	const sortedSizes = [...sizes].sort((a, b) => {
+		const widthA = parseInt(String(a?.width) || '0', 10)
+		const widthB = parseInt(String(b?.width) || '0', 10)
+		return widthB - widthA
+	})
+
+	const largestSize = sortedSizes[0]
+	if (largestSize && property in largestSize) {
+		return String(largestSize[property])
+	}
+
 	return ''
 }
 

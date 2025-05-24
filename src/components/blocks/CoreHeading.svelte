@@ -71,7 +71,7 @@
 {/if}
 {#if level === 3}
 	<h3
-		class="{headingClasses} {className} {$language === 'en' ? 'tracking-wider' : ''} uppercase mt-2 md:mt-5 mb-2 md:mb-3 mx-2 lg:mx-0"
+		class="{headingClasses} {className} {$language === 'en' ? 'tracking-wider' : ''} uppercase mb-2 md:mb-3 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h3>
