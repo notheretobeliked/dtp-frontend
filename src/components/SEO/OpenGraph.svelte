@@ -4,6 +4,13 @@
   */
   import type { ImageObject } from '$lib/types/wp-types'
 
+  interface ImageSize {
+    name: string;
+    sourceUrl: string;
+    width: number;
+    height: number;
+    mimeType?: string;
+  }
   
   interface Props {
     // Mark image and squareImage as optional using ? after the type
@@ -25,12 +32,16 @@
   }: Props = $props();
 
   // Helper function to select an image size, defaults to 'large' or the first available size
-  function selectImageSize(sizes, preferredSize = 'large') {
+  function selectImageSize(sizes: ImageSize[], preferredSize = 'large') {
     return sizes.find(size => size.name === preferredSize) || sizes[0]
   }
 
   // Use optional chaining (?) and nullish coalescing (??) operators to safely access properties
-  let imageUrl = $derived(image ? selectImageSize(image.mediaDetails.sizes ?? []).sourceUrl ?? undefined : undefined)
+  let imageUrl = $derived(image ? 
+    (image.mediaDetails?.sizes ? 
+      selectImageSize(image.mediaDetails.sizes).sourceUrl : 
+      (image as any).attributes?.url) ?? undefined 
+    : undefined)
 </script>
 
 <svelte:head>
