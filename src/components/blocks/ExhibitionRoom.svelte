@@ -554,7 +554,7 @@
 															src={group.images.nodes[0]?.sourceUrl}
 															alt={group.images.nodes[0]?.altText || ''}
 															style="height: 100%; width: auto; object-fit: contain;"
-															class="img-content"
+															class="img-content drop-shadow-lg"
 														/>
 													</div>
 												</div>
@@ -583,7 +583,7 @@
 																src={group.images.nodes[1]?.sourceUrl}
 																alt={group.images.nodes[1]?.altText || ''}
 																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content"
+																class="img-content drop-shadow-lg"
 															/>
 														</div>
 													</div>
@@ -612,7 +612,7 @@
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content"
+																		class="img-content drop-shadow-lg"
 																	/>
 																</div>
 															</div>
@@ -643,7 +643,7 @@
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content"
+																		class="img-content drop-shadow-lg"
 																	/>
 																</div>
 															</div>
@@ -677,7 +677,7 @@
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content"
+																		class="img-content drop-shadow-lg"
 																	/>
 																</div>
 															</div>
@@ -710,7 +710,7 @@
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content"
+																		class="img-content drop-shadow-lg"
 																	/>
 																</div>
 															</div>
@@ -755,7 +755,7 @@
 																src={group.images.nodes[group.images.nodes.length - 1]?.sourceUrl}
 																alt={group.images.nodes[group.images.nodes.length - 1]?.altText || ''}
 																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content"
+																class="img-content drop-shadow-lg"
 															/>
 														</div>
 													</div>
