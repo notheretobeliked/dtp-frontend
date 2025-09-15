@@ -6,7 +6,7 @@
 
 	let { block }: Props = $props();
 	let isUsingTouch = false
-	import { onMount } from 'svelte'
+	import { onMount, onDestroy } from 'svelte'
 	import { fade } from 'svelte/transition'
 	import type { AcfHomePageSection } from '$lib/graphql/generated'
 	const images = block.homePageSection?.images?.nodes ?? []
@@ -57,6 +57,15 @@
 			}
 			
 			scrollInterval = setInterval(() => {
+				// Add null check to prevent errors during navigation
+				if (!containerRef || containerRef.scrollLeft === undefined) {
+					if (scrollInterval) {
+						clearInterval(scrollInterval)
+						scrollInterval = undefined
+					}
+					return
+				}
+
 				containerRef.scrollLeft -= scrollStep
 
 				if (Math.abs(containerRef.scrollLeft) < 1) {
@@ -168,6 +177,14 @@
 		
 		return () => {
 			window.removeEventListener('resize', handleResize)
+		}
+	})
+
+	// Clean up interval when component is destroyed
+	onDestroy(() => {
+		if (scrollInterval) {
+			clearInterval(scrollInterval)
+			scrollInterval = undefined
 		}
 	})
 </script>

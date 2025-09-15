@@ -15,13 +15,57 @@
 	import { fade } from 'svelte/transition'
 	import CoreHeading from './CoreHeading.svelte'
 	import Image from '$components/Image.svelte'
+	import ImageSkeleton from '$components/atoms/ImageSkeleton.svelte'
 	import { activeBook } from '$stores/activeBook'
 	import { inview } from 'svelte-inview'
 	let isInView: boolean = $state()
 	let scrollDirection: Direction | undefined // Update this line
-	// Process groups to update layout based on aspect ratio
-	// Process groups to update layout based on aspect ratio
 
+	// Loading state management
+	let imageLoadStates = $state<Record<string, boolean>>({})
+	let allImagesLoaded = $state(false)
+	let initialBatchLoaded = $state(false)
+
+	// Helper to generate unique image keys
+	function getImageKey(cabinetIndex: number, groupIndex: number, imageIndex: number): string {
+		return `c${cabinetIndex}_g${groupIndex}_i${imageIndex}`
+	}
+
+	// Track when images are loaded
+	$effect(() => {
+		const totalImages = block?.exhibitionRoom?.cabinets?.reduce((total, cabinet) => 
+			total + (cabinet?.groups?.reduce((groupTotal, group) => 
+				groupTotal + (group?.images?.nodes?.length || 0), 0) || 0), 0) || 0
+		
+		const loadedImages = Object.values(imageLoadStates).filter(Boolean).length
+		const wasAllLoaded = allImagesLoaded
+		allImagesLoaded = loadedImages === totalImages && totalImages > 0
+		
+		// Calculate initial batch (first cabinet's first group, or first 8 images, whichever is smaller)
+		const firstCabinet = block?.exhibitionRoom?.cabinets?.[0]
+		const firstGroup = firstCabinet?.groups?.[0]
+		const initialBatchSize = Math.min(
+			firstGroup?.images?.nodes?.length || 8, 
+			8  // Show progress bar until at least 8 images or first group is loaded
+		)
+		
+		const wasInitialLoaded = initialBatchLoaded
+		initialBatchLoaded = loadedImages >= initialBatchSize && totalImages > 0
+		
+		// Debug logging
+		if (loadedImages !== totalImages || !wasAllLoaded || !wasInitialLoaded) {
+			console.log(`Image loading progress: ${loadedImages}/${totalImages} (initial batch: ${loadedImages}/${initialBatchSize})`, {
+				loadedImages,
+				totalImages,
+				initialBatchSize,
+				allImagesLoaded,
+				initialBatchLoaded,
+				imageLoadStates: Object.keys(imageLoadStates).length
+			})
+		}
+	})
+
+	// Process groups to update layout based on aspect ratio
 	if (block?.exhibitionRoom?.cabinets) {
 		block.exhibitionRoom.cabinets.forEach((cabinet) => {
 			if (cabinet?.groups) {
@@ -173,9 +217,86 @@
 		if (animationInterval) clearInterval(animationInterval)
 	})
 
+	// Preload critical images and pre-calculate dimensions
 	onMount(() => {
 		updateButtonPosition()
 		window.addEventListener('resize', updateButtonPosition)
+
+		// Preload first cabinet's images
+		const firstCabinet = block?.exhibitionRoom?.cabinets?.[0]
+		if (firstCabinet?.groups?.[0]?.images?.nodes) {
+			firstCabinet.groups[0].images.nodes.slice(0, 3).forEach((image: any) => {
+				if (image?.sourceUrl) {
+					const img = document.createElement('img')
+					img.src = image.sourceUrl
+				}
+			})
+		}
+
+		// Pre-calculate heights for organic-landscape layouts
+		const estimatedWidth = window.innerWidth < 1024 ? window.innerWidth * 0.9 : window.innerWidth * 0.45
+		
+		block?.exhibitionRoom?.cabinets?.forEach((cabinet, cabinetIndex) => {
+			cabinet?.groups?.forEach((group, groupIndex) => {
+				if (group?.layout?.[0] === 'organic-landscape' && group?.images?.nodes?.length) {
+					const groupKey = getGroupId(cabinetIndex, groupIndex)
+					groupHeights[groupKey] = precalculateGroupHeight(group, estimatedWidth)
+					// Don't set normalized to true immediately - wait for DOM measurements
+					// normalizedGroups[groupKey] = true
+				}
+			})
+		})
+
+		// Setup actual DOM measurements after a delay
+		setTimeout(() => {
+			if (!block?.exhibitionRoom?.cabinets) return
+			
+			block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
+				if (!cabinet?.groups) return
+				
+				cabinet.groups.forEach((group, groupIndex) => {
+					if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return
+					
+					const groupKey = getGroupId(cabinetIndex, groupIndex)
+					
+					const containers = document.querySelectorAll(`.group-${groupKey} .img-container`)
+					if (containers.length === 0) {
+						// If no containers found, use pre-calculated height and show
+						normalizedGroups[groupKey] = true
+						return
+					}
+					
+					const calculatedHeights: number[] = []
+					
+					containers.forEach((container, i) => {
+						if (!group?.images?.nodes) return
+                        
+						const imageIndex = i === containers.length - 1 && containers.length > 3 
+							? group.images.nodes.length - 1
+							: i === 0 ? 0 : (i < 3 ? i : i - 1)
+							
+						const image = group.images.nodes[imageIndex]
+						const aspectRatio = getImageAspectRatio(image)
+						const containerWidth = (container as HTMLElement).offsetWidth
+						
+						const expectedHeight = containerWidth / aspectRatio
+						calculatedHeights.push(expectedHeight)
+					})
+					
+					if (calculatedHeights.length > 0) {
+						const minHeight = Math.min(...calculatedHeights)
+						// Only update if the new calculation is significantly different
+						if (Math.abs(groupHeights[groupKey] - minHeight) > 10) {
+							groupHeights[groupKey] = minHeight
+						}
+					}
+					
+					// Always show the group after measurement
+					normalizedGroups[groupKey] = true
+				})
+			})
+		}, 400)
+
 		return () => window.removeEventListener('resize', updateButtonPosition)
 	})
 
@@ -183,6 +304,22 @@
 		if (!reference) return
 		$activeBook = reference
 		console.log('Set active book reference:', reference)
+	}
+
+	// Action to setup image load detection
+	function setupImageLoad(node: HTMLElement, imageKey: string) {
+		const img = node.querySelector('img');
+		if (img && !img.hasAttribute('data-onload-set')) {
+			img.setAttribute('data-onload-set', 'true');
+			img.onload = () => imageLoadStates[imageKey] = true;
+			if (img.complete) imageLoadStates[imageKey] = true;
+		}
+		
+		return {
+			destroy() {
+				// Cleanup if needed
+			}
+		}
 	}
 
 	// Helper function to get aspect ratio from image - now uses cached value if available
@@ -221,6 +358,17 @@
 		}
 	}
 
+	// Precalculate group height helper
+	function precalculateGroupHeight(group: any, containerWidth: number = 400): number {
+		if (!group?.images?.nodes?.length) return 300
+		
+		const heights = group.images.nodes.map((image: any) => {
+			const aspectRatio = getImageAspectRatio(image)
+			return containerWidth / aspectRatio
+		})
+		
+		return Math.min(...heights)
+	}
 	
 	// Add this effect for each animation group
 	$effect(() => {
@@ -251,67 +399,17 @@
 	function getGroupId(cabinetIndex: number, groupIndex: number): string {
 		return `cabinet${cabinetIndex}_group${groupIndex}`;
 	}
-	
-	// Setup to normalize image heights - using DOM measurements
-	onMount(() => {
-		// Set a small delay to ensure DOM is fully rendered
-		setTimeout(() => {
-			if (!block?.exhibitionRoom?.cabinets) return;
-			
-			// For all cabinets and groups
-			block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
-				if (!cabinet?.groups) return;
-				
-				cabinet.groups.forEach((group, groupIndex) => {
-					// Only process organic-landscape layouts
-					if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return;
-					
-					const groupKey = getGroupId(cabinetIndex, groupIndex);
-					
-					// First find all container elements for this group
-					const containers = document.querySelectorAll(`.group-${groupKey} .img-container`);
-					if (containers.length === 0) return;
-					
-					// Calculate heights based on actual container widths and image aspect ratios
-					const calculatedHeights: number[] = [];
-					
-					containers.forEach((container, i) => {
-						// The image aspect ratio (from media details)
-						if (!group?.images?.nodes) return;
-                        
-						const imageIndex = i === containers.length - 1 && containers.length > 3 
-							? group.images.nodes.length - 1  // Last image in group with 4+ images
-							: i === 0 ? 0 : (i < 3 ? i : i - 1); // First image is 0, adjust indices for others
-							
-						const image = group.images.nodes[imageIndex];
-						const aspectRatio = getImageAspectRatio(image);
-						// Get the actual rendered width of the container
-						const containerWidth = container.offsetWidth;
-						console.log(containerWidth)
-						
-						// Calculate expected height at this width
-						const expectedHeight = containerWidth / aspectRatio;
-						calculatedHeights.push(expectedHeight);
-					});
-					
-					// Find the smallest height in the group (this will be applied to all)
-					if (calculatedHeights.length > 0) {
-						// Use smallest height from calculations
-						const minHeight = Math.min(...calculatedHeights);
-						
-						// Store for use in template
-						groupHeights[groupKey] = minHeight;
-						
-						// Mark group as ready to display with a small delay
-						setTimeout(() => {
-							normalizedGroups[groupKey] = true;
-						}, 100);
-					}
-				});
-			});
-		}, 200); // Small delay to ensure all elements are rendered
-	});
 </script>
+
+<!-- Loading progress bar -->
+{#if !initialBatchLoaded}
+	<div class="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+		<div 
+			class="h-full bg-black transition-all duration-300"
+			style="width: {(Object.values(imageLoadStates).filter(Boolean).length / Math.max(Math.min(block?.exhibitionRoom?.cabinets?.[0]?.groups?.[0]?.images?.nodes?.length || 8, 8), 1)) * 100}%"
+		></div>
+	</div>
+{/if}
 
 <div class="w-full flex flex-row">
 	<div class="images">
@@ -420,6 +518,7 @@
 										>
 											{#if group.images?.nodes}
 												{#each group.images.nodes as image, i}
+													{@const imageKey = getImageKey(cabinetIndex, groupIndex, i)}
 													<div
 														class="relative w-[180px] hover:scale-105 transition-all duration-500 {cabinetIndex ===
 															0 && groupIndex === 0
@@ -434,12 +533,25 @@
 														tabindex="0"
 														class:cursor-pointer={image.reference}
 													>
-														<Image
-															imageObject={image}
-															imageSize="thumbnail"
-															shadow={group.shadow}
-															fit="contain"
-														/>
+														{#if !imageLoadStates[imageKey]}
+															<ImageSkeleton 
+																aspectRatio={getImageAspectRatio(image)}
+																className="w-[180px] h-[180px]"
+															/>
+														{/if}
+														<div 
+															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'}" 
+															class:absolute={!imageLoadStates[imageKey]} 
+															class:inset-0={!imageLoadStates[imageKey]}
+															use:setupImageLoad={imageKey}
+														>
+															<Image
+																imageObject={image}
+																imageSize="thumbnail"
+																shadow={group.shadow}
+																fit="contain"
+															/>
+														</div>
 													</div>
 												{/each}
 											{/if}
@@ -454,6 +566,7 @@
 										>
 											{#if group.images?.nodes}
 												{#each group.images.nodes as image, i}
+													{@const imageKey = getImageKey(cabinetIndex, groupIndex, i)}
 													<div
 														class="{getImageHeightClass(
 															image,
@@ -468,12 +581,25 @@
 														tabindex="0"
 														class:cursor-pointer={image.reference}
 													>
-														<Image
-															imageObject={image}
-															imageSize="large"
-															fit="contain"
-															shadow={group.shadow}
-														/>
+														{#if !imageLoadStates[imageKey]}
+															<ImageSkeleton 
+																aspectRatio={getImageAspectRatio(image)}
+																className="w-full h-full"
+															/>
+														{/if}
+														<div 
+															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'}" 
+															class:absolute={!imageLoadStates[imageKey]} 
+															class:inset-0={!imageLoadStates[imageKey]}
+															use:setupImageLoad={imageKey}
+														>
+															<Image
+																imageObject={image}
+																imageSize="large"
+																fit="contain"
+																shadow={group.shadow}
+															/>
+														</div>
 													</div>
 												{/each}
 											{/if}
@@ -485,8 +611,9 @@
 											{#if group.images?.nodes?.length > 0}
 												<div class="relative h-[300px] lg:h-[527px] w-full lg:max-w-[800px]">
 													{#key previousImageIndex}
+														{@const prevImageKey = getImageKey(cabinetIndex, groupIndex, previousImageIndex)}
 														<div class="absolute inset-0 flex justify-center w-full h-full z-10">
-															<div class="relative h-full flex justify-center">
+															<div class="relative h-full flex justify-center" use:setupImageLoad={prevImageKey}>
 																<Image
 																	imageObject={group.images.nodes[previousImageIndex]}
 																	imageSize="large"
@@ -496,6 +623,7 @@
 														</div>
 													{/key}
 													{#key currentImageIndex}
+														{@const currImageKey = getImageKey(cabinetIndex, groupIndex, currentImageIndex)}
 														<div
 															class="absolute inset-0 flex justify-center w-full h-full z-20"
 															transition:fade={{ duration: 200 }}
@@ -509,7 +637,7 @@
 															class:cursor-pointer={group.images.nodes[currentImageIndex]
 																?.reference}
 														>
-															<div class="relative h-full flex justify-center">
+															<div class="relative h-full flex justify-center" use:setupImageLoad={currImageKey}>
 																<Image
 																	imageObject={group.images.nodes[currentImageIndex]}
 																	imageSize="large"
@@ -532,6 +660,7 @@
 										>
 											{#if group.images?.nodes?.length > 0}
 												<!-- First image -->
+												{@const firstImageKey = getImageKey(cabinetIndex, groupIndex, 0)}
 												<div class="lg:col-span-2 flex justify-center">
 													<div
 														class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
@@ -550,17 +679,26 @@
 														tabindex="0"
 														class:cursor-pointer={group.images.nodes[0]?.reference}
 													>
+														{#if !imageLoadStates[firstImageKey]}
+															<ImageSkeleton 
+																aspectRatio={getImageAspectRatio(group.images.nodes[0])}
+																className="w-full h-full"
+															/>
+														{/if}
 														<img 
 															src={group.images.nodes[0]?.sourceUrl}
 															alt={group.images.nodes[0]?.altText || ''}
 															style="height: 100%; width: auto; object-fit: contain;"
-															class="img-content drop-shadow-lg"
+															class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[firstImageKey] ? 'opacity-100' : 'opacity-0'}"
+															onload={() => imageLoadStates[firstImageKey] = true}
+															loading="lazy"
 														/>
 													</div>
 												</div>
 
 												<!-- For 2 images, show the second image centered -->
 												{#if group.images.nodes.length === 2}
+													{@const secondImageKey = getImageKey(cabinetIndex, groupIndex, 1)}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
 															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
@@ -579,17 +717,26 @@
 															tabindex="0"
 															class:cursor-pointer={group.images.nodes[1]?.reference}
 														>
+															{#if !imageLoadStates[secondImageKey]}
+																<ImageSkeleton 
+																	aspectRatio={getImageAspectRatio(group.images.nodes[1])}
+																	className="w-full h-full"
+																/>
+															{/if}
 															<img 
 																src={group.images.nodes[1]?.sourceUrl}
 																alt={group.images.nodes[1]?.altText || ''}
 																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content drop-shadow-lg"
+																class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[secondImageKey] ? 'opacity-100' : 'opacity-0'}"
+																onload={() => imageLoadStates[secondImageKey] = true}
+																loading="lazy"
 															/>
 														</div>
 													</div>
 													<!-- For 3 images, show remaining images in alternating layout -->
 												{:else if group.images.nodes.length === 3}
 													{#each group.images.nodes.slice(1) as image, i}
+														{@const imgKey = getImageKey(cabinetIndex, groupIndex, i + 1)}
 														{#if i % 2 === 0}
 															<div class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end">
 																<div
@@ -608,11 +755,19 @@
 																	tabindex="0"
 																	class:cursor-pointer={(image as any)?.reference}
 																>
+																	{#if !imageLoadStates[imgKey]}
+																		<ImageSkeleton 
+																			aspectRatio={getImageAspectRatio(image)}
+																			className="w-full h-full"
+																		/>
+																	{/if}
 																	<img 
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg"
+																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
+																		onload={() => imageLoadStates[imgKey] = true}
+																		loading="lazy"
 																	/>
 																</div>
 															</div>
@@ -639,11 +794,19 @@
 																	tabindex="0"
 																	class:cursor-pointer={(image as any)?.reference}
 																>
+																	{#if !imageLoadStates[imgKey]}
+																		<ImageSkeleton 
+																			aspectRatio={getImageAspectRatio(image)}
+																			className="w-full h-full"
+																		/>
+																	{/if}
 																	<img 
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg"
+																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
+																		onload={() => imageLoadStates[imgKey] = true}
+																		loading="lazy"
 																	/>
 																</div>
 															</div>
@@ -652,6 +815,7 @@
 													<!-- For 4+ images -->
 												{:else}
 													{#each group.images.nodes.slice(1, -1) as image, i}
+														{@const imgKey = getImageKey(cabinetIndex, groupIndex, i + 1)}
 														{#if i % 2 === 0}
 															<!-- Even indexed images (2nd, 4th, etc.) -->
 															<div
@@ -673,11 +837,19 @@
 																	tabindex="0"
 																	class:cursor-pointer={(image as any)?.reference}
 																>
+																	{#if !imageLoadStates[imgKey]}
+																		<ImageSkeleton 
+																			aspectRatio={getImageAspectRatio(image)}
+																			className="w-full h-full"
+																		/>
+																	{/if}
 																	<img 
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg"
+																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
+																		onload={() => imageLoadStates[imgKey] = true}
+																		loading="lazy"
 																	/>
 																</div>
 															</div>
@@ -706,11 +878,19 @@
 																	tabindex="0"
 																	class:cursor-pointer={(image as any)?.reference}
 																>
+																	{#if !imageLoadStates[imgKey]}
+																		<ImageSkeleton 
+																			aspectRatio={getImageAspectRatio(image)}
+																			className="w-full h-full"
+																		/>
+																	{/if}
 																	<img 
 																		src={(image as any)?.sourceUrl}
 																		alt={(image as any)?.altText || ''}
 																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg"
+																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
+																		onload={() => imageLoadStates[imgKey] = true}
+																		loading="lazy"
 																	/>
 																</div>
 															</div>
@@ -726,6 +906,7 @@
 													{/each}
 
 													<!-- Final centered image (only if more than 3 images) -->
+													{@const lastImageKey = getImageKey(cabinetIndex, groupIndex, group.images.nodes.length - 1)}
 													<div class="lg:col-span-2 flex justify-center">
 														<div
 															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
@@ -751,11 +932,19 @@
 																group.images.nodes.length - 1
 															]?.reference}
 														>
+															{#if !imageLoadStates[lastImageKey]}
+																<ImageSkeleton 
+																	aspectRatio={getImageAspectRatio(group.images.nodes[group.images.nodes.length - 1])}
+																	className="w-full h-full"
+																/>
+															{/if}
 															<img 
 																src={group.images.nodes[group.images.nodes.length - 1]?.sourceUrl}
 																alt={group.images.nodes[group.images.nodes.length - 1]?.altText || ''}
 																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content drop-shadow-lg"
+																class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[lastImageKey] ? 'opacity-100' : 'opacity-0'}"
+																onload={() => imageLoadStates[lastImageKey] = true}
+																loading="lazy"
 															/>
 														</div>
 													</div>
