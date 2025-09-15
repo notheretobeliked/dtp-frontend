@@ -233,69 +233,113 @@
 			})
 		}
 
-		// Pre-calculate heights for organic-landscape layouts
-		const estimatedWidth = window.innerWidth < 1024 ? window.innerWidth * 0.9 : window.innerWidth * 0.45
-		
-		block?.exhibitionRoom?.cabinets?.forEach((cabinet, cabinetIndex) => {
-			cabinet?.groups?.forEach((group, groupIndex) => {
-				if (group?.layout?.[0] === 'organic-landscape' && group?.images?.nodes?.length) {
-					const groupKey = getGroupId(cabinetIndex, groupIndex)
-					groupHeights[groupKey] = precalculateGroupHeight(group, estimatedWidth)
-					// Don't set normalized to true immediately - wait for DOM measurements
-					// normalizedGroups[groupKey] = true
-				}
-			})
-		})
-
-		// Setup actual DOM measurements after a delay
-		setTimeout(() => {
-			if (!block?.exhibitionRoom?.cabinets) return
+		// Pre-calculate heights for organic-landscape layouts (desktop only)
+		if (window.innerWidth >= 1024) {
+			const estimatedWidth = window.innerWidth * 0.45
 			
-			block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
-				if (!cabinet?.groups) return
-				
-				cabinet.groups.forEach((group, groupIndex) => {
-					if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return
-					
-					const groupKey = getGroupId(cabinetIndex, groupIndex)
-					
-					const containers = document.querySelectorAll(`.group-${groupKey} .img-container`)
-					if (containers.length === 0) {
-						// If no containers found, use pre-calculated height and show
-						normalizedGroups[groupKey] = true
-						return
+			block?.exhibitionRoom?.cabinets?.forEach((cabinet, cabinetIndex) => {
+				cabinet?.groups?.forEach((group, groupIndex) => {
+					if (group?.layout?.[0] === 'organic-landscape' && group?.images?.nodes?.length) {
+						const groupKey = getGroupId(cabinetIndex, groupIndex)
+						groupHeights[groupKey] = precalculateGroupHeight(group, estimatedWidth)
+						// Don't set normalized to true immediately - wait for DOM measurements
+						// normalizedGroups[groupKey] = true
 					}
-					
-					const calculatedHeights: number[] = []
-					
-					containers.forEach((container, i) => {
-						if (!group?.images?.nodes) return
-                        
-						const imageIndex = i === containers.length - 1 && containers.length > 3 
-							? group.images.nodes.length - 1
-							: i === 0 ? 0 : (i < 3 ? i : i - 1)
-							
-						const image = group.images.nodes[imageIndex]
-						const aspectRatio = getImageAspectRatio(image)
-						const containerWidth = (container as HTMLElement).offsetWidth
-						
-						const expectedHeight = containerWidth / aspectRatio
-						calculatedHeights.push(expectedHeight)
-					})
-					
-					if (calculatedHeights.length > 0) {
-						const minHeight = Math.min(...calculatedHeights)
-						// Only update if the new calculation is significantly different
-						if (Math.abs(groupHeights[groupKey] - minHeight) > 10) {
-							groupHeights[groupKey] = minHeight
-						}
-					}
-					
-					// Always show the group after measurement
-					normalizedGroups[groupKey] = true
 				})
 			})
-		}, 400)
+
+			// Setup actual DOM measurements after a delay (desktop only)
+			setTimeout(() => {
+				if (!block?.exhibitionRoom?.cabinets) return
+				
+				block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
+					if (!cabinet?.groups) return
+					
+					cabinet.groups.forEach((group, groupIndex) => {
+						if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return
+						
+						const groupKey = getGroupId(cabinetIndex, groupIndex)
+						
+						const containers = document.querySelectorAll(`.group-${groupKey} .img-container`)
+						if (containers.length === 0) {
+							// If no containers found, use pre-calculated height and show
+							normalizedGroups[groupKey] = true
+							return
+						}
+						
+						const calculatedHeights: number[] = []
+						
+						containers.forEach((container, i) => {
+							if (!group?.images?.nodes) return
+	                        
+							const imageIndex = i === containers.length - 1 && containers.length > 3 
+								? group.images.nodes.length - 1
+								: i === 0 ? 0 : (i < 3 ? i : i - 1)
+								
+							const image = group.images.nodes[imageIndex]
+							const aspectRatio = getImageAspectRatio(image)
+							const containerWidth = (container as HTMLElement).offsetWidth
+							
+							const expectedHeight = containerWidth / aspectRatio
+							calculatedHeights.push(expectedHeight)
+						})
+						
+						if (calculatedHeights.length > 0) {
+							const minHeight = Math.min(...calculatedHeights)
+							// Only update if the new calculation is significantly different
+							if (Math.abs(groupHeights[groupKey] - minHeight) > 10) {
+								groupHeights[groupKey] = minHeight
+							}
+						}
+						
+						// Always show the group after measurement
+						normalizedGroups[groupKey] = true
+					})
+				})
+			}, 400)
+		} else {
+			// On mobile, calculate height normalization for organic-landscape groups
+			setTimeout(() => {
+				if (!block?.exhibitionRoom?.cabinets) return
+				
+				block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
+					if (!cabinet?.groups) return
+					
+					cabinet.groups.forEach((group, groupIndex) => {
+						if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length || group.images.nodes.length < 2) {
+							// For non-organic-landscape or single image groups, show immediately
+							const groupKey = getGroupId(cabinetIndex, groupIndex)
+							normalizedGroups[groupKey] = true
+							return
+						}
+						
+						const groupKey = getGroupId(cabinetIndex, groupIndex)
+						
+						// Find subsequent landscape images (skip first image which is usually square/portrait)
+						const landscapeImages = group.images.nodes.slice(1).filter((image: any) => {
+							const aspectRatio = getImageAspectRatio(image)
+							return aspectRatio > 1.2 // Landscape images
+						})
+						
+						if (landscapeImages.length > 0) {
+							// Use the screen width to calculate expected height of landscape images
+							const mobileScreenWidth = window.innerWidth * 0.9 // Account for padding
+							const landscapeHeights = landscapeImages.map((image: any) => {
+								const aspectRatio = getImageAspectRatio(image)
+								return mobileScreenWidth / aspectRatio
+							})
+							
+							// Use the smallest height among landscape images
+							const normalizedHeight = Math.min(...landscapeHeights)
+							groupHeights[groupKey] = normalizedHeight
+						}
+						
+						// Show the group
+						normalizedGroups[groupKey] = true
+					})
+				})
+			}, 200) // Shorter delay for mobile
+		}
 
 		return () => window.removeEventListener('resize', updateButtonPosition)
 	})
@@ -560,7 +604,7 @@
 
 									{#if group.layout[0] === 'centered'}
 										<div
-											class="flex flex-col gap-[200px] mb-[100px] lg:mb-[200px] items-center layout-centered"
+											class="flex flex-col gap-[200px] mb-[100px] lg:mb-[200px] items-center layout-centered max-w-[100vw] "
 											use:inview={options}
 											oninview_change={handleChange}
 										>
@@ -669,7 +713,7 @@
 
 									{#if group.layout[0] === 'organic' || group.layout[0] === 'organic-landscape'}
 										<div 
-											class="lg:grid lg:grid-cols-2 gap-4 mb-[200px] layout-{group.layout[0]} group-{getGroupId(cabinetIndex, groupIndex)} transition-opacity duration-500" 
+											class="lg:grid lg:grid-cols-2 gap-4 mb-[200px] max-w-[100vw] layout-{group.layout[0]} group-{getGroupId(cabinetIndex, groupIndex)} transition-opacity duration-500" 
 											class:invisible={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
 											class:opacity-0={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
 											class:opacity-100={group.layout[0] !== 'organic-landscape' || normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
