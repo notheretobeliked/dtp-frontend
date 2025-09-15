@@ -588,7 +588,7 @@
 															/>
 														{/if}
 														<div 
-															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'}" 
+															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'} w-full h-full" 
 															class:absolute={!imageLoadStates[imageKey]} 
 															class:inset-0={!imageLoadStates[imageKey]}
 															use:setupImageLoad={imageKey}
@@ -598,6 +598,7 @@
 																imageSize="large"
 																fit="contain"
 																shadow={group.shadow}
+																extraClasses="!w-auto !h-full"
 															/>
 														</div>
 													</div>
@@ -609,21 +610,34 @@
 									{#if group.layout[0] === 'animation'}
 										<div class="flex flex-col mt-[200px] mb-[200px] items-center layout-centered">
 											{#if group.images?.nodes?.length > 0}
-												<div class="relative h-[300px] lg:h-[527px] w-full lg:max-w-[800px]">
+												<!-- Preload all animation images hidden -->
+												{#each group.images.nodes as animImage, animIndex}
+													{@const animImageKey = getImageKey(cabinetIndex, groupIndex, animIndex)}
+													<div class="hidden" use:setupImageLoad={animImageKey}>
+														<Image
+															imageObject={animImage}
+															imageSize="large"
+															fit="contain"
+															lazy={false}
+														/>
+													</div>
+												{/each}
+												
+												<div class="relative h-[300px] lg:h-[430px] w-full lg:max-w-[800px]">
 													{#key previousImageIndex}
-														{@const prevImageKey = getImageKey(cabinetIndex, groupIndex, previousImageIndex)}
 														<div class="absolute inset-0 flex justify-center w-full h-full z-10">
-															<div class="relative h-full flex justify-center" use:setupImageLoad={prevImageKey}>
+															<div class="relative h-full flex justify-center w-full">
 																<Image
 																	imageObject={group.images.nodes[previousImageIndex]}
 																	imageSize="large"
 																	fit="contain"
+																	lazy={false}
+																	extraClasses="!w-auto !h-full"
 																/>
 															</div>
 														</div>
 													{/key}
 													{#key currentImageIndex}
-														{@const currImageKey = getImageKey(cabinetIndex, groupIndex, currentImageIndex)}
 														<div
 															class="absolute inset-0 flex justify-center w-full h-full z-20"
 															transition:fade={{ duration: 200 }}
@@ -637,11 +651,13 @@
 															class:cursor-pointer={group.images.nodes[currentImageIndex]
 																?.reference}
 														>
-															<div class="relative h-full flex justify-center" use:setupImageLoad={currImageKey}>
+															<div class="relative h-full flex justify-center w-full">
 																<Image
 																	imageObject={group.images.nodes[currentImageIndex]}
 																	imageSize="large"
 																	fit="contain"
+																	lazy={false}
+																	extraClasses="!w-auto !h-full"
 																/>
 															</div>
 														</div>
