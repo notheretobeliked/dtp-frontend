@@ -340,24 +340,6 @@ function processSitemapData(data: SitemapData): ProcessedSitemapEntry[] {
 		}
 	})
 	
-	// Add library pages
-	processedEntries.push({
-		uri: '/en/library',
-		modified: new Date().toISOString(),
-		languageCode: 'en',
-		type: 'library',
-		slug: 'library',
-		translations: [{ languageCode: 'ar', uri: '/ar/library', slug: 'library' }]
-	})
-	
-	processedEntries.push({
-		uri: '/ar/library',
-		modified: new Date().toISOString(),
-		languageCode: 'ar',
-		type: 'library',
-		slug: 'library',
-		translations: [{ languageCode: 'en', uri: '/en/library', slug: 'library' }]
-	})
 	
 	// Sort by modified date (newest first)
 	return processedEntries.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
@@ -379,6 +361,24 @@ function generateSitemapXML(sitemapEntries: ProcessedSitemapEntry[], baseUrl: st
 	const entries = sitemapEntries.map(entry => {
 		const fullUrl = `${baseUrl}${entry.uri}`
 		const lastmod = new Date(entry.modified).toISOString()
+		
+		// Determine priority based on URL depth
+		let priority = '0.6' // Default for deep pages (3+ levels)
+		
+		// Count URL segments (excluding language prefix)
+		const segments = entry.uri.split('/').filter(segment => segment && segment !== 'en' && segment !== 'ar')
+		const depth = segments.length
+		
+		if (entry.uri === '/en' || entry.uri === '/ar' || entry.uri === '/en/' || entry.uri === '/ar/') {
+			// Homepage gets highest priority
+			priority = '1.0'
+		} else if (depth === 1) {
+			// Top level pages (e.g., /en/about, /ar/man-nahn)
+			priority = '0.8'
+		} else if (depth >= 3) {
+			// Deep pages (e.g., /en/learning-hub/some-post)
+			priority = '0.6'
+		}
 		
 		// Add hreflang attributes for multi-language support
 		let hreflangEntries = ''
@@ -416,7 +416,7 @@ function generateSitemapXML(sitemapEntries: ProcessedSitemapEntry[], baseUrl: st
     <loc>${fullUrl}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>${hreflangEntries ? '\n' + hreflangEntries : ''}
+    <priority>${priority}</priority>${hreflangEntries ? '\n' + hreflangEntries : ''}
   </url>`
 	}).join('\n')
 	

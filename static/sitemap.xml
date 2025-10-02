@@ -1,22 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://www.decolonizingthepage.com/ar/library</loc>
-    <lastmod>2025-10-02T12:45:34.710Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.decolonizingthepage.com/en/library" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.decolonizingthepage.com/en/library" />
-  </url>
-  <url>
-    <loc>https://www.decolonizingthepage.com/en/library</loc>
-    <lastmod>2025-10-02T12:45:34.709Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.decolonizingthepage.com/ar/library" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.decolonizingthepage.com/en/library" />
-  </url>
-  <url>
     <loc>https://www.decolonizingthepage.com/en/about</loc>
     <lastmod>2025-05-24T12:14:54.000Z</lastmod>
     <changefreq>weekly</changefreq>
@@ -28,25 +12,25 @@
     <loc>https://www.decolonizingthepage.com/ar/learning-hub/al-taqalid-al-fanniyya-li-l-kitab</loc>
     <lastmod>2025-05-22T08:05:47.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.decolonizingthepage.com/en/learning-hub/zeina-is-testing-again</loc>
     <lastmod>2025-05-22T08:04:00.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.decolonizingthepage.com/ar/learning-hub/%d8%aa%d9%8a%d8%b3%d8%aa%d9%8a%d9%86%d8%ba-%d8%b2%d9%8a%d9%86%d8%a9-%d9%85%d9%82%d8%a7%d9%84%d8%a9</loc>
     <lastmod>2025-05-20T22:00:03.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.decolonizingthepage.com/en</loc>
     <lastmod>2025-05-07T14:45:15.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="ar" href="https://www.decolonizingthepage.com/ar" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.decolonizingthepage.com/en" />
   </url>
@@ -94,13 +78,13 @@
     <loc>https://www.decolonizingthepage.com/en/learning-hub/heres-a-big-heading</loc>
     <lastmod>2025-01-24T14:28:57.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.decolonizingthepage.com/en/learning-hub/zeina-is-testing</loc>
     <lastmod>2025-01-03T18:40:40.000Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.decolonizingthepage.com/en/library</loc>
