@@ -1,0 +1,66 @@
+query GetSitemapData {
+	arPosts: posts(first: 100, where: {language: "ar", status: PUBLISH}) {
+		nodes {
+			uri
+			modified
+			language {
+				code
+			}
+			translations {
+				language {
+					code
+				}
+				uri
+				slug
+			}
+		}
+	}
+	arPages: pages(first: 100, where: {language: "ar", status: PUBLISH}) {
+		nodes {
+			uri
+			modified
+			language {
+				code
+			}
+			translations {
+				language {
+					code
+				}
+				uri
+				slug
+			}
+		}
+	}
+	enPosts: posts(first: 100, where: {language: "en", status: PUBLISH}) {
+		nodes {
+			uri
+			modified
+			language {
+				code
+			}
+			translations {
+				language {
+					code
+				}
+				uri
+				slug
+			}
+		}
+	}
+	enPages: pages(first: 100, where: {language: "en", status: PUBLISH}) {
+		nodes {
+			uri
+			modified
+			language {
+				code
+			}
+			translations {
+				language {
+					code
+				}
+				uri
+				slug
+			}
+		}
+	}
+}
