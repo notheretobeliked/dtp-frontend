@@ -17,6 +17,7 @@
 	import Image from '$components/Image.svelte'
 	import ImageSkeleton from '$components/atoms/ImageSkeleton.svelte'
 	import { activeBook } from '$stores/activeBook'
+	import { isInfoOpen } from '$stores/infoPanel'
 	import { inview } from 'svelte-inview'
 	let isInView: boolean = $state()
 	let scrollDirection: Direction | undefined // Update this line
@@ -153,7 +154,13 @@
 		if (detail.inView) {
 			lastVisibleSection = 'room-intro'
 			const introElement = document.getElementById('room-intro')
-			if (introElement && isInfoOpen) {
+			// Use get() to access store value in non-reactive context
+			let currentValue: boolean = false
+			const unsubscribe = isInfoOpen.subscribe((value) => {
+				currentValue = value
+			})
+			unsubscribe()
+			if (introElement && currentValue) {
 				introElement.scrollIntoView({ behavior: 'smooth' })
 			}
 		}
@@ -165,7 +172,13 @@
 			if (detail.inView) {
 				lastVisibleSection = `text-${cabinetId}`
 				const textElement = document.getElementById(`text-${cabinetId}`)
-				if (textElement && isInfoOpen) {
+				// Use get() to access store value in non-reactive context
+				let currentValue: boolean = false
+				const unsubscribe = isInfoOpen.subscribe((value) => {
+					currentValue = value
+				})
+				unsubscribe()
+				if (textElement && currentValue) {
 					textElement.scrollIntoView({ behavior: 'smooth' })
 				}
 			}
@@ -187,7 +200,6 @@
 	import { fly } from 'svelte/transition'
 
 	let infoDiv: HTMLElement
-	let isInfoOpen = $state(false)
 	let lastVisibleSection: string = 'room-intro' // Default to room intro
 
 	let buttonPosition: number
@@ -200,8 +212,15 @@
 	}
 
 	const toggleInfo = () => {
-		isInfoOpen = !isInfoOpen
-		if (isInfoOpen) {
+		isInfoOpen.toggle()
+		// Get the new value after toggle
+		let newValue: boolean = false
+		const unsubscribe = isInfoOpen.subscribe((value) => {
+			newValue = value
+		})
+		unsubscribe()
+		
+		if (newValue) {
 			setTimeout(() => {
 				const element = document.getElementById(lastVisibleSection)
 				if (element) {
@@ -1020,7 +1039,7 @@
 			{/each}
 		{/if}
 	</div>
-	{#if isInfoOpen}
+	{#if $isInfoOpen}
 		<div
 			transition:fly={{ x: 500, duration: 800 }}
 			class="fixed right-0 top-0 max-w-[500px] z-30 {$language === 'ar' ? 'dir-rtl' : ''} "
@@ -1036,7 +1055,7 @@
 					viewBox="0 0 14 14"
 					fill="none"
 					xmlns="http://www.w3.org/2000/svg"
-					class="transition-transform duration-300 {isInfoOpen ? '' : 'rotate-45'}"
+					class="transition-transform duration-300 {$isInfoOpen ? '' : 'rotate-45'}"
 				>
 					<path d="M1 1L13 13M1 13L13 1" stroke="black" stroke-width="1" />
 				</svg>
