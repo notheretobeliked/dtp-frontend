@@ -24,37 +24,35 @@
 
 	// Loading state management
 	let imageLoadStates = $state<Record<string, boolean>>({})
-	let allImagesLoaded = $state(false)
-	let initialBatchLoaded = $state(false)
-
+	
 	// Helper to generate unique image keys
 	function getImageKey(cabinetIndex: number, groupIndex: number, imageIndex: number): string {
 		return `c${cabinetIndex}_g${groupIndex}_i${imageIndex}`
 	}
 
-	// Track when images are loaded
-	$effect(() => {
-		const totalImages = block?.exhibitionRoom?.cabinets?.reduce((total, cabinet) => 
+	// Computed loading states using $derived instead of $effect to avoid reactive loops
+	const totalImages = $derived(
+		block?.exhibitionRoom?.cabinets?.reduce((total, cabinet) => 
 			total + (cabinet?.groups?.reduce((groupTotal, group) => 
 				groupTotal + (group?.images?.nodes?.length || 0), 0) || 0), 0) || 0
-		
-		const loadedImages = Object.values(imageLoadStates).filter(Boolean).length
-		const wasAllLoaded = allImagesLoaded
-		allImagesLoaded = loadedImages === totalImages && totalImages > 0
-		
-		// Calculate initial batch (first cabinet's first group, or first 8 images, whichever is smaller)
-		const firstCabinet = block?.exhibitionRoom?.cabinets?.[0]
-		const firstGroup = firstCabinet?.groups?.[0]
-		const initialBatchSize = Math.min(
-			firstGroup?.images?.nodes?.length || 8, 
-			8  // Show progress bar until at least 8 images or first group is loaded
+	);
+	
+	const loadedImages = $derived(Object.values(imageLoadStates).filter(Boolean).length);
+	
+	const allImagesLoaded = $derived(loadedImages === totalImages && totalImages > 0);
+	
+	const initialBatchSize = $derived(
+		Math.min(
+			block?.exhibitionRoom?.cabinets?.[0]?.groups?.[0]?.images?.nodes?.length || 8, 
+			8
 		)
-		
-		const wasInitialLoaded = initialBatchLoaded
-		initialBatchLoaded = loadedImages >= initialBatchSize && totalImages > 0
-		
-		// Debug logging
-		if (loadedImages !== totalImages || !wasAllLoaded || !wasInitialLoaded) {
+	);
+	
+	const initialBatchLoaded = $derived(loadedImages >= initialBatchSize && totalImages > 0);
+	
+	// Debug logging effect (separate from state calculations)
+	$effect(() => {
+		if (loadedImages !== totalImages) {
 			console.log(`Image loading progress: ${loadedImages}/${totalImages} (initial batch: ${loadedImages}/${initialBatchSize})`, {
 				loadedImages,
 				totalImages,
@@ -66,29 +64,12 @@
 		}
 	})
 
-	// Process groups to update layout based on aspect ratio
+	// Process groups to update layout based on aspect ratio (aspect ratios are now pre-calculated on server)
 	if (block?.exhibitionRoom?.cabinets) {
 		block.exhibitionRoom.cabinets.forEach((cabinet) => {
 			if (cabinet?.groups) {
 				cabinet.groups?.forEach((group) => {
 					if (!group || !group.layout) return
-
-					// Add aspect ratio to each image for reuse
-					if (group.images?.nodes?.length) {
-						group.images.nodes.forEach((image: any) => {
-							if (!image) return;
-							const largeSize = image.mediaDetails?.sizes?.find(
-								(size: any) => size && size.name === 'large'
-							);
-							if (largeSize?.width && largeSize?.height) {
-								// Store aspect ratio on the image object
-								image.aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height);
-							} else {
-								// Default to square if no dimensions
-								image.aspectRatio = 1;
-							}
-						});
-					}
 
 					if (group?.layout[0] === 'organic' && group.images?.nodes?.[0]) {
 						// Skip landscape check if there are only 2 images
@@ -385,18 +366,10 @@
 		}
 	}
 
-	// Helper function to get aspect ratio from image - now uses cached value if available
+	// Helper function to get aspect ratio from image - now uses pre-calculated server value
 	function getImageAspectRatio(image: any): number {
-		// Return cached aspect ratio if available
-		if (image.aspectRatio) return image.aspectRatio;
-		
-		// Otherwise calculate it
-		const largeSize = image?.mediaDetails?.sizes?.find((size: any) => size?.name === 'large');
-		if (!largeSize?.width || !largeSize?.height) return 1; // Default to square if no dimensions
-		
-		// Store for future use
-		image.aspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height);
-		return image.aspectRatio;
+		// Return pre-calculated aspect ratio from server, with fallback to 1
+		return image?.aspectRatio ?? 1;
 	}
 	
 	// Replaced getImageOrientation function to use cached aspect ratio
@@ -433,26 +406,23 @@
 		return Math.min(...heights)
 	}
 	
-	// Add this effect for each animation group
-	$effect(() => {
+	// Initialize animation on mount instead of using reactive effect
+	onMount(() => {
 		// For each animation section that needs to be started
 		const groups = block?.exhibitionRoom?.cabinets?.flatMap(c => 
 			c?.groups?.filter(g => g?.layout?.[0] === 'animation') ?? []
 		) ?? [];
 		
-		groups.forEach(group => {
-			if (group?.images?.nodes?.length && !animationInterval) {
-				startAnimation(group.images.nodes);
-			}
-		});
-		
-		// Cleanup when component unmounts
-		return () => {
-			if (animationInterval) {
-				clearInterval(animationInterval);
-				animationInterval = undefined;
-			}
-		};
+		if (groups.length > 0 && groups[0]?.images?.nodes?.length) {
+			startAnimation(groups[0].images.nodes);
+		}
+	});
+	
+	// Cleanup when component unmounts
+	onDestroy(() => {
+		if (animationInterval) {
+			clearInterval(animationInterval);
+		}
 	});
 
 	// Image height normalization for organic-landscape layout
