@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { run, createBubbler, stopPropagation } from 'svelte/legacy';
+	import { createBubbler, stopPropagation } from 'svelte/legacy'
 
-	const bubble = createBubbler();
+	const bubble = createBubbler()
 	import '../app.css'
 	import { page, navigating } from '$app/stores'
-	import type { PageData } from './$types'
+	import type { LayoutData } from './$types'
 	import Twitter from '$components/SEO/Twitter.svelte'
 	import OpenGraph from '$components/SEO/OpenGraph.svelte'
 	import Header from '$components/Header.svelte'
@@ -15,15 +15,14 @@
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
 
-
 	interface Props {
-		data: PageData;
-		children?: import('svelte').Snippet<[any]>;
+		data: LayoutData
+		children?: import('svelte').Snippet<[any]>
 	}
 
-	let { data, children }: Props = $props();
+	let { data, children }: Props = $props()
 	let { seo, menu, uri } = data
-	const menuItems = menu.menuItems.nodes
+	const menuItems = menu?.menuItems?.nodes
 	const image = seo.opengraphImage
 	const metadescription = seo.metaDesc
 	const pageTitle = seo.title
@@ -34,17 +33,11 @@
 		document.documentElement.lang = $language
 	})
 
-	run(() => {
-		menuItems
-		uri
-		seo
-	});
-
 	let showModal = $state(false)
 	let currentBook: string | null = $state(null)
 
 	// Watch the activeBook store and find the matching book from page data
-	run(() => {
+	$effect(() => {
 		if ($activeBook) {
 			showModal = true
 			loading = true
@@ -60,18 +53,23 @@
 					loading = false
 				})
 		}
-	});
+	})
 
 	function closeModal() {
 		showModal = false
 		$activeBook = null
 	}
 
-	run(() => {
-		$language = $page.params.lang || 'en'
-	});
-</script>
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			closeModal()
+		}
+	}
 
+	$effect(() => {
+		$language = $page.params.lang || 'en'
+	})
+</script>
 
 {#key $page.url.pathname}
 	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />
@@ -89,24 +87,40 @@
 {/if}
 
 <main class="md:px-0">
-	{@render children?.({ data, })}
+	{@render children?.({ data })}
 </main>
 
 <!-- Add this at the bottom of your template -->
 {#if showModal}
-	<div class="fixed inset-0 z-50" onclick={closeModal}>
+	<div
+		class="fixed inset-0 z-50"
+		onclick={closeModal}
+		onkeydown={handleKeydown}
+		role="button"
+		tabindex="0"
+		aria-label="Close modal"
+	>
 		<div
 			class="fixed bottom-0 bg-black w-full z-50 flex items-center justify-center p-4"
 			transition:slide={{ duration: 300, axis: 'y' }}
-			onclick={closeModal}
+			onclick={stopPropagation(bubble('click'))}
+			onkeydown={(e) => e.stopPropagation()}
 			role="dialog"
+			tabindex="-1"
+			aria-modal="true"
 		>
 			<div
 				class="text-white-pure mx-auto max-w-screen-xl w-full max-h-[90vh] overflow-y-auto relative lg:overflow-y-visible"
 				onclick={stopPropagation(bubble('click'))}
+				onkeydown={(e) => e.stopPropagation()}
+				role="presentation"
 			>
 				<div class="flex justify-end mb-4 w-full lg:absolute lg:translate-x-6">
-					<button class="text-gray-500 hover:text-gray-700" onclick={closeModal}>
+					<button
+						class="text-gray-500 hover:text-gray-700"
+						onclick={closeModal}
+						aria-label="Close modal"
+					>
 						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path
 								stroke-linecap="round"

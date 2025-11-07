@@ -85,13 +85,11 @@ export const load: LayoutServerLoad<LoadReturn> = async function load({ params, 
 			)
 			seoData = { ...seoData, opengraphUrl: siteUrl }
 		} else {
-			// Provide fallback SEO data
 			seoData = {
 				title: 'Decolonizing the Page',
 				metaDesc: 'Decolonizing the Page',
 				opengraphUrl: `${PUBLIC_SITE_URL}${uri}`,
 				opengraphImage: null
-				// Add other required SEO fields with default values
 			}
 		}
 
