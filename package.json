@@ -14,7 +14,6 @@
 		"codegen": "graphql-codegen --config codegen.yml"
 	},
 	"devDependencies": {
-		"@accuser/svelte-plausible-analytics": "^1.0.0",
 		"@graphql-codegen/cli": "^5.0.3",
 		"@graphql-codegen/typescript": "^4.1.0",
 		"@graphql-codegen/typescript-generic-sdk": "^4.0.1",

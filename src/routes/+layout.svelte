@@ -14,7 +14,6 @@
 	import { activeBook } from '$stores/activeBook'
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
-	import { PlausibleAnalytics } from '@accuser/svelte-plausible-analytics';
 
 
 	interface Props {
@@ -73,7 +72,6 @@
 	});
 </script>
 
-<PlausibleAnalytics />
 
 {#key $page.url.pathname}
 	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />

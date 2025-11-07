@@ -18,9 +18,6 @@ importers:
         specifier: ^4.0.4
         version: 4.0.4(svelte@5.43.4)
     devDependencies:
-      '@accuser/svelte-plausible-analytics':
-        specifier: ^1.0.0
-        version: 1.0.0(@sveltejs/kit@2.48.4(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0)))(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0)))(svelte@5.43.4)
       '@graphql-codegen/cli':
         specifier: ^5.0.3
         version: 5.0.7(@types/node@24.10.0)(graphql@16.12.0)(typescript@5.9.3)
@@ -107,12 +104,6 @@ importers:
         version: 5.4.21(@types/node@24.10.0)
 
 packages:
-
-  '@accuser/svelte-plausible-analytics@1.0.0':
-    resolution: {integrity: sha512-wZegJmMt3UGmTMo1KXEDL7pKjK/GyKfFAociujHsCKkCuzNIIfUhydancxnettLZVfBaOJe6xT6OrPpo/kfBYg==}
-    peerDependencies:
-      '@sveltejs/kit': ^1.30.3 || ^2.0.0
-      svelte: ^4.2.8
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -3042,11 +3033,6 @@ packages:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
 snapshots:
-
-  '@accuser/svelte-plausible-analytics@1.0.0(@sveltejs/kit@2.48.4(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0)))(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0)))(svelte@5.43.4)':
-    dependencies:
-      '@sveltejs/kit': 2.48.4(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0)))(svelte@5.43.4)(vite@5.4.21(@types/node@24.10.0))
-      svelte: 5.43.4
 
   '@alloc/quick-lru@5.2.0': {}
 
