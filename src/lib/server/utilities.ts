@@ -251,10 +251,37 @@ export function flatListToHierarchical<T extends Record<string, any>>(
 	return tree.map(normalizeEditorBlock) // Normalize each root level block
 }
 
+function calculateImageAspectRatio(image: any): number {
+	if (!image?.mediaDetails?.sizes) return 1;
+	
+	const largeSize = image.mediaDetails.sizes.find((size: any) => size?.name === 'large');
+	if (!largeSize?.width || !largeSize?.height) return 1;
+	
+	return parseInt(largeSize.width) / parseInt(largeSize.height);
+}
+
 export function normalizeEditorBlock(block: any) {
 	// Ensure attributes exists before attempting to access it
 	if (!block.attributes) {
 		block.attributes = {} // Initialize with an empty object if it doesn't exist
+	}
+
+	// Process ExhibitionRoom blocks to pre-calculate aspect ratios
+	if (block.name === 'acf/exhibition-room' && block.exhibitionRoom?.cabinets) {
+		block.exhibitionRoom.cabinets.forEach((cabinet: any) => {
+			if (cabinet?.groups) {
+				cabinet.groups.forEach((group: any) => {
+					if (group?.images?.nodes?.length) {
+						group.images.nodes.forEach((image: any) => {
+							if (image) {
+								// Pre-calculate and store aspect ratio
+								image.aspectRatio = calculateImageAspectRatio(image);
+							}
+						});
+					}
+				});
+			}
+		});
 	}
 
 	// Check if 'core/more' block and add necessary attributes
