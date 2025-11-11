@@ -21,12 +21,11 @@
 	}
 
 	let { data, children }: Props = $props()
-	let { seo, menu, uri } = data
+	let { seo, menu, uri, siteUrl } = data
 	const menuItems = menu?.menuItems?.nodes
 	const image = seo.opengraphImage
 	const metadescription = seo.metaDesc
 	const pageTitle = seo.title
-	const siteUrl = seo.siteUrl
 	const siteTitle = seo.opengraphSiteName // Assuming this is used for og:site_name
 	let loading = $state(false)
 	afterNavigate(() => {

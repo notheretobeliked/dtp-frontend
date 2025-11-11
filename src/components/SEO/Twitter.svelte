@@ -37,6 +37,9 @@
       selectImageSize(image.mediaDetails.sizes).sourceUrl : 
       (image as any).attributes?.url) ?? undefined 
     : undefined)
+  
+  // Fallback image with full site URL
+  let fallbackImageUrl = $derived(`${siteUrl}/decolonizingthepage.jpg`)
 </script>
 
 <svelte:head>
@@ -44,8 +47,6 @@
   <meta name="twitter:title" content={pageTitle} />
   <meta name="twitter:description" content={metadescription} />
   <meta name="twitter:url" content={siteUrl} />
-  {#if image}
-    <meta name="twitter:image" content={imageUrl} />
-    <meta name="twitter:image:alt" content={image.altText} />
-  {/if}
+  <meta name="twitter:image" content={imageUrl || fallbackImageUrl} />
+  <meta name="twitter:image:alt" content={image?.altText || 'Decolonizing the page'} />
 </svelte:head>

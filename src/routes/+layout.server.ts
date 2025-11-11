@@ -15,7 +15,8 @@ interface LoadReturn {
 	translations: NonNullable<NonNullable<PageMetaQuery['page']>['translations']>
 	seo: NonNullable<NonNullable<PageMetaQuery['page']>['seo']>
 	uri: string
-	lang: string // Add this line
+	lang: string
+	siteUrl: string
 }
 
 export const load: LayoutServerLoad<LoadReturn> = async function load({ params, url }) {
@@ -91,7 +92,7 @@ export const load: LayoutServerLoad<LoadReturn> = async function load({ params, 
 				title: 'Decolonizing the Page',
 				metaDesc: 'Decolonizing the Page',
 				opengraphUrl: `${PUBLIC_SITE_URL}${uri}`,
-				opengraphImage: null
+				opengraphImage: `${PUBLIC_SITE_URL}/decolonizingthepage.jpg`
 			}
 		}
 
@@ -108,7 +109,8 @@ export const load: LayoutServerLoad<LoadReturn> = async function load({ params, 
 					: 'en',
 			translations: data.page?.translations || [],
 			seo: seoData,
-			uri
+			uri,
+			siteUrl: PUBLIC_SITE_URL
 		} satisfies LoadReturn
 	} catch (err: unknown) {
 		// Check if it's a response error from the GraphQL query

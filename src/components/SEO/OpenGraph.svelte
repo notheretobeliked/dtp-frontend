@@ -42,6 +42,9 @@
       selectImageSize(image.mediaDetails.sizes).sourceUrl : 
       (image as any).attributes?.url) ?? undefined 
     : undefined)
+  
+  // Fallback image with full site URL
+  let fallbackImageUrl = $derived(`${siteUrl}/decolonizingthepage.jpg`)
 </script>
 
 <svelte:head>
@@ -55,6 +58,6 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content={pageTitle} />
   <meta property="og:description" content={metadescription} />
-  <meta property="og:image" content="/decolonizingthepage.jpg" />
+  <meta property="og:image" content={imageUrl || fallbackImageUrl} />
   <meta property="og:image:alt" content="Decolonizing the page" />
 </svelte:head>
