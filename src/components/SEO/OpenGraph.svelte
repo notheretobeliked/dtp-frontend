@@ -11,7 +11,7 @@
     height: number;
     mimeType?: string;
   }
-  
+
   interface Props {
     // Mark image and squareImage as optional using ? after the type
     image: ImageObject | undefined | null;
@@ -37,10 +37,10 @@
   }
 
   // Use optional chaining (?) and nullish coalescing (??) operators to safely access properties
-  let imageUrl = $derived(image ? 
-    (image.mediaDetails?.sizes ? 
-      selectImageSize(image.mediaDetails.sizes).sourceUrl : 
-      (image as any).attributes?.url) ?? undefined 
+  let imageUrl = $derived(image ?
+    (image.mediaDetails?.sizes ?
+      selectImageSize(image.mediaDetails.sizes).sourceUrl :
+      (image as any).attributes?.url) ?? undefined
     : undefined)
   
   // Fallback image with full site URL

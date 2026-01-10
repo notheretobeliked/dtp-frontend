@@ -3,6 +3,64 @@ import type { LibraryItemsQuery, LibraryItemsQueryVariables } from '$lib/graphql
 import LibraryItems from '$lib/graphql/query/library.graphql?raw'
 import { checkResponse, graphqlQuery } from './graphql'
 import { error } from '@sveltejs/kit'
+import { PUBLIC_CDN_URL } from '$env/static/public'
+
+/**
+ * Rewrites a single URL from WordPress/Bedrock to CDN.
+ * Only rewrites URLs containing /app/uploads/ (Bedrock structure).
+ */
+function rewriteUrlToCdn(url: string): string {
+	if (!url || !PUBLIC_CDN_URL) {
+		return url
+	}
+
+	// Only rewrite Bedrock upload URLs
+	if (!url.includes('/app/uploads/')) {
+		return url
+	}
+
+	try {
+		const urlObj = new URL(url)
+		const cdnUrl = new URL(PUBLIC_CDN_URL)
+		// Replace the origin with CDN, keep the path
+		return `${cdnUrl.origin}${urlObj.pathname}`
+	} catch {
+		// If URL parsing fails, return original
+		return url
+	}
+}
+
+/**
+ * Recursively walks an object and rewrites media URLs to use CDN.
+ * Targets 'sourceUrl' and 'url' properties containing /app/uploads/.
+ */
+function rewriteMediaUrls<T>(obj: T): T {
+	if (!obj || typeof obj !== 'object') {
+		return obj
+	}
+
+	if (Array.isArray(obj)) {
+		return obj.map(item => rewriteMediaUrls(item)) as T
+	}
+
+	const result = { ...obj } as Record<string, any>
+
+	for (const key in result) {
+		if (Object.prototype.hasOwnProperty.call(result, key)) {
+			const value = result[key]
+
+			// Rewrite sourceUrl and url properties that are strings
+			if ((key === 'sourceUrl' || key === 'url') && typeof value === 'string') {
+				result[key] = rewriteUrlToCdn(value)
+			} else if (typeof value === 'object' && value !== null) {
+				// Recursively process nested objects
+				result[key] = rewriteMediaUrls(value)
+			}
+		}
+	}
+
+	return result as T
+}
 
 export async function fetchAllLibraryItems(language: string) {
 	let hasNextPage = true
@@ -92,7 +150,7 @@ export const restructureLibraryItems = (data: LibraryItemsQuery) => {
 				.join(' ')
 				.toLowerCase()
 
-			return {
+			return rewriteMediaUrls({
 				slug: book.slug,
 				edition: bookData.edition ?? null,
 				exhibition: bookData.exhibition ?? null,
@@ -125,7 +183,7 @@ export const restructureLibraryItems = (data: LibraryItemsQuery) => {
 				authorFilterTerm,
 				publisherFilterTerm,
 				titleFilterTerm: bookData.title?.toLowerCase() ?? null
-			}
+			})
 		})
 		.filter((book): book is NonNullable<typeof book> => book !== null)
 }
@@ -348,5 +406,6 @@ export function normalizeEditorBlock(block: any) {
 		}
 	}
 
-	return block
+	// Rewrite media URLs to use CDN (if PUBLIC_CDN_URL is set)
+	return rewriteMediaUrls(block)
 }

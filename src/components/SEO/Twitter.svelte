@@ -32,10 +32,10 @@
   }
 
   // Use optional chaining (?) and nullish coalescing (??) operators to safely access properties
-  let imageUrl = $derived(image ? 
-    (image.mediaDetails?.sizes ? 
-      selectImageSize(image.mediaDetails.sizes).sourceUrl : 
-      (image as any).attributes?.url) ?? undefined 
+  let imageUrl = $derived(image ?
+    (image.mediaDetails?.sizes ?
+      selectImageSize(image.mediaDetails.sizes).sourceUrl :
+      (image as any).attributes?.url) ?? undefined
     : undefined)
   
   // Fallback image with full site URL
