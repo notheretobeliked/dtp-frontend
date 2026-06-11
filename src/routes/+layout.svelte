@@ -65,10 +65,35 @@
 		}
 	}
 
+	// Matches /<lang>/library/<ref> (optional trailing slash), e.g. /en/library/a035
+	const LIBRARY_REF_PATTERN = /^\/[^/]+\/library\/([^/?#]+)\/?$/
+
+	// Intercept clicks on any link to a library reference (in post content,
+	// CoreImage figcaptions, etc.) and open the book label instead of navigating.
+	function handleGlobalClick(event: MouseEvent) {
+		// Let the browser handle modified clicks (new tab/window, etc.)
+		if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+			return
+		}
+
+		const anchor = (event.target as Element | null)?.closest?.('a')
+		if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) {
+			return
+		}
+
+		const match = anchor.pathname.match(LIBRARY_REF_PATTERN)
+		if (!match) return
+
+		event.preventDefault()
+		$activeBook = decodeURIComponent(match[1])
+	}
+
 	$effect(() => {
 		$language = $page.params.lang || 'en'
 	})
 </script>
+
+<svelte:window onclick={handleGlobalClick} />
 
 {#key $page.url.pathname}
 	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />
