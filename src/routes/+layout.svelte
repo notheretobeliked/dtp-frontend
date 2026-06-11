@@ -14,6 +14,7 @@
 	import { activeBook } from '$stores/activeBook'
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
+	import { onMount } from 'svelte'
 
 	interface Props {
 		data: LayoutData
@@ -70,6 +71,10 @@
 
 	// Intercept clicks on any link to a library reference (in post content,
 	// CoreImage figcaptions, etc.) and open the book label instead of navigating.
+	// Runs in the capture phase (see onMount) so it fires before SvelteKit's own
+	// router intercepts same-origin internal links. `anchor.pathname` strips the
+	// host, so this matches both relative (/en/library/a035) and absolute
+	// (https://www.decolonizingthepage.com/en/library/a035) hrefs.
 	function handleGlobalClick(event: MouseEvent) {
 		// Let the browser handle modified clicks (new tab/window, etc.)
 		if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -85,15 +90,20 @@
 		if (!match) return
 
 		event.preventDefault()
+		event.stopPropagation()
 		$activeBook = decodeURIComponent(match[1])
 	}
+
+	onMount(() => {
+		// Capture phase: run before SvelteKit's router and any bubble-phase handlers.
+		window.addEventListener('click', handleGlobalClick, true)
+		return () => window.removeEventListener('click', handleGlobalClick, true)
+	})
 
 	$effect(() => {
 		$language = $page.params.lang || 'en'
 	})
 </script>
-
-<svelte:window onclick={handleGlobalClick} />
 
 {#key $page.url.pathname}
 	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />
