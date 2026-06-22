@@ -31,6 +31,14 @@
 	let loading = $state(false)
 	afterNavigate(() => {
 		document.documentElement.lang = $language
+		// Close the book label on any real navigation (e.g. following the permalink
+		// inside the popover to the library page). Opening the label uses
+		// preventDefault and never navigates, so this only fires when we genuinely
+		// leave the page — exactly when the popover should get out of the way.
+		if (showModal) {
+			showModal = false
+			$activeBook = null
+		}
 	})
 
 	let showModal = $state(false)
@@ -83,6 +91,13 @@
 
 		const anchor = (event.target as Element | null)?.closest?.('a')
 		if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) {
+			return
+		}
+
+		// Only convert links inside post content (figcaptions, paragraphs, etc.).
+		// Links elsewhere — notably the permalink inside the <Label> popover — must
+		// navigate to the library page as normal.
+		if (!anchor.closest('[data-post-content]')) {
 			return
 		}
 
@@ -149,9 +164,11 @@
 				onkeydown={(e) => e.stopPropagation()}
 				role="presentation"
 			>
-				<div class="flex justify-end mb-4 w-full lg:absolute lg:translate-x-6">
+				<div
+					class="flex justify-end mb-4 w-full lg:absolute lg:translate-x-6 lg:pointer-events-none"
+				>
 					<button
-						class="text-gray-500 hover:text-gray-700"
+						class="text-gray-500 hover:text-gray-700 pointer-events-auto"
 						onclick={closeModal}
 						aria-label="Close modal"
 					>

@@ -15,13 +15,9 @@ export const findImageSizeData = (
 		return String(size[property])
 	}
 
-	// Then try thumbnail as a fallback
-	const thumbnail = sizes.find((size) => size?.name === 'thumbnail')
-	if (thumbnail && property in thumbnail) {
-		return String(thumbnail[property])
-	}
-
-	// If neither requested size nor thumbnail found, get the largest size available
+	// Otherwise fall back to the largest size available (never the thumbnail —
+	// many images lack a `large`/`x_large` variant and would otherwise collapse
+	// to the 200px thumbnail).
 	const sortedSizes = [...sizes].sort((a, b) => {
 		const widthA = parseInt(String(a?.width) || '0', 10)
 		const widthB = parseInt(String(b?.width) || '0', 10)

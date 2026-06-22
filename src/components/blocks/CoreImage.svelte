@@ -7,29 +7,36 @@
 
 	let { block }: Props = $props();
 
-	// Create a fallback size using the direct URL if available
-	const fallbackSize = {
-		name: 'full',
-		sourceUrl: block.attributes?.url || '',
-		width: '1024',  // default width
-		height: '768'   // default height
-	}
+	// The original/full-size image (the backend keeps originals at full
+	// resolution). Always offer it as the largest srcset candidate, so images
+	// that only generated small subsizes — e.g. wide/short images that never get
+	// a `large`/`x_large` variant — still render sharp instead of collapsing to a
+	// thumbnail.
+	const fullSize =
+		block.attributes?.url && block.mediaDetails?.width && block.mediaDetails?.height
+			? {
+					name: 'full',
+					sourceUrl: block.attributes.url,
+					width: String(block.mediaDetails.width),
+					height: String(block.mediaDetails.height)
+				}
+			: null
 
-	// Handle all possible edge cases for sizes
-	const sizes = (() => {
-		// Case 1: mediaDetails is null
-		if (!block.mediaDetails) {
-			return [fallbackSize]
-		}
+	const generatedSizes =
+		block.mediaDetails && Array.isArray(block.mediaDetails.sizes)
+			? block.mediaDetails.sizes.filter(Boolean)
+			: []
 
-		// Case 2: sizes is null or empty
-		if (!block.mediaDetails.sizes || !Array.isArray(block.mediaDetails.sizes) || block.mediaDetails.sizes.length === 0) {
-			return [fallbackSize]
-		}
+	// Combine generated subsizes with the full original, de-duped by URL.
+	const combined = [...generatedSizes, fullSize].filter(
+		(size, i, arr) => size && arr.findIndex((other) => other?.sourceUrl === size.sourceUrl) === i
+	)
 
-		// Case 3: sizes exists and has content - use as is
-		return block.mediaDetails.sizes
-	})()
+	// Last-ditch fallback so we always have at least one candidate.
+	const sizes =
+		combined.length > 0
+			? combined
+			: [{ name: 'full', sourceUrl: block.attributes?.url || '', width: '1024', height: '768' }]
 
 	const imageObject = {
 		altText: block.attributes?.alt ? block.attributes.alt : '',

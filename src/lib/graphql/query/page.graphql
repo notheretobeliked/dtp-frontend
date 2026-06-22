@@ -280,7 +280,9 @@ fragment CommonBlockFields on EditorBlock {
 	}
 	... on CoreImage {
 		mediaDetails {
-			sizes(exclude: [MEDIUM_LARGE, MEDIUM]) {
+			width
+			height
+			sizes {
 				sourceUrl
 				height
 				width
@@ -392,7 +394,9 @@ fragment CommonBlockFields on EditorBlock {
 
 fragment MediaDetailsFragment on MediaItem {
 	mediaDetails {
-		sizes(exclude: [MEDIUM_LARGE, MEDIUM]) {
+		width
+		height
+		sizes {
 			sourceUrl
 			height
 			width

@@ -76,6 +76,7 @@
 </script>
 
 <div
+	data-post-content
 	class="{isHomePage ? 'pt-[56px] pb-0' : 'pt-24'} min-h-screen {bgColourClass} {isHomePage
 		? 'homepage'
 		: ''} {$language === 'ar' ? 'dir-rtl' : ''}"
