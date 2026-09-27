@@ -17,6 +17,8 @@
 	import Image from '$components/Image.svelte'
 	import ImageSkeleton from '$components/atoms/ImageSkeleton.svelte'
 	import { activeBook } from '$stores/activeBook'
+	import { labelTranslations } from '$stores/translations'
+	import { page } from '$app/stores'
 	import { isInfoOpen } from '$stores/infoPanel'
 	import { inview } from 'svelte-inview'
 	let isInView: boolean = $state()
@@ -344,6 +346,52 @@
 		return () => window.removeEventListener('resize', updateButtonPosition)
 	})
 
+	// Print-only list of works (records come from the page load, keyed by lowercased ref)
+	const credits = $derived($page.data.libraryCredits ?? {})
+
+	const creditRoles = [
+		'coverDesign',
+		'coverIllustration',
+		'coverCalligraphy',
+		'pageDesign',
+		'pageIllustration',
+		'pageCalligraphy'
+	] as const
+
+	// Each book once, in order of appearance
+	function getCabinetRefs(cabinet: any): string[] {
+		const refs: string[] =
+			cabinet?.groups?.flatMap(
+				(group: any) => group?.images?.nodes?.map((image: any) => image?.reference) ?? []
+			) ?? []
+		return [...new Set(refs.filter(Boolean).map((ref) => ref.toLowerCase()))].filter(
+			(ref) => credits[ref]
+		)
+	}
+
+	// "Cover design, cover illustration: Kamal Boullata; Page calligraphy: Elias Nicolas"
+	function formatRoles(work: Record<string, any>, lang: 'en' | 'ar'): string {
+		const byPerson = new Map<string, string[]>()
+		for (const role of creditRoles) {
+			const person = work[role]?.trim()
+			if (!person) continue
+			const label = $labelTranslations[role][lang]
+			byPerson.set(person, [...(byPerson.get(person) ?? []), label])
+		}
+		return [...byPerson]
+			.map(([person, roles]) => {
+				const label = roles
+					.map((role, i) => (i && lang === 'en' ? role.toLowerCase() : role))
+					.join(lang === 'ar' ? '، ' : ', ')
+				return `${label}: ${person}`
+			})
+			.join(lang === 'ar' ? '؛ ' : '; ')
+	}
+
+	function formatPublication(work: Record<string, any>, lang: 'en' | 'ar'): string {
+		return [work.publisher, work.place, work.year].filter(Boolean).join(lang === 'ar' ? '، ' : ', ')
+	}
+
 	const handleImageClick = (reference: string) => {
 		if (!reference) return
 		$activeBook = reference
@@ -434,9 +482,15 @@
 	}
 </script>
 
+{#snippet refCode(reference: string | null | undefined)}
+	{#if reference}
+		<span class="print-ref hidden print:block">{reference}</span>
+	{/if}
+{/snippet}
+
 <!-- Loading progress bar -->
 {#if !initialBatchLoaded}
-	<div class="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+	<div class="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50 print:hidden">
 		<div 
 			class="h-full bg-black transition-all duration-300"
 			style="width: {(Object.values(imageLoadStates).filter(Boolean).length / Math.max(Math.min(block?.exhibitionRoom?.cabinets?.[0]?.groups?.[0]?.images?.nodes?.length || 8, 8), 1)) * 100}%"
@@ -447,7 +501,7 @@
 <div class="w-full flex flex-row">
 	<div class="images">
 		<header
-			class="mb-[200px] mt-[200px]"
+			class="mb-[200px] mt-[200px] print:my-0"
 			use:inview={{
 				rootMargin: '0px 0px -80% 0px', // Triggers when header is near top
 				unobserveOnEnter: false
@@ -482,6 +536,11 @@
 						}
 					}}
 				/>
+			{/if}
+			{#if block?.exhibitionRoom?.introText}
+				<div class="hidden print:block basestyles introtext {$language === 'ar' ? 'ar' : ''}">
+					{@html block.exhibitionRoom.introText}
+				</div>
 			{/if}
 		</header>
 
@@ -532,8 +591,7 @@
 						</header>
 
 						{#if cabinet.introText}
-							<div class="basestyles {$language === 'ar' ? 'ar' : ''} hidden">
-								>
+							<div class="basestyles {$language === 'ar' ? 'ar' : ''} hidden print:block">
 								{@html cabinet.introText}
 							</div>
 						{/if}
@@ -585,6 +643,7 @@
 																fit="contain"
 															/>
 														</div>
+														{@render refCode(image.reference)}
 													</div>
 												{/each}
 											{/if}
@@ -634,6 +693,7 @@
 																extraClasses="!w-auto !h-full"
 															/>
 														</div>
+														{@render refCode(image.reference)}
 													</div>
 												{/each}
 											{/if}
@@ -641,12 +701,12 @@
 									{/if}
 
 									{#if group.layout[0] === 'animation'}
-										<div class="flex flex-col mt-[200px] mb-[200px] items-center layout-centered">
+										<div class="flex flex-col mt-[200px] mb-[200px] items-center layout-centered layout-animation">
 											{#if group.images?.nodes?.length > 0}
 												<!-- Preload all animation images hidden -->
 												{#each group.images.nodes as animImage, animIndex}
 													{@const animImageKey = getImageKey(cabinetIndex, groupIndex, animIndex)}
-													<div class="hidden" use:setupImageLoad={animImageKey}>
+													<div class="hidden print:block animation-frame" use:setupImageLoad={animImageKey}>
 														<Image
 															imageObject={animImage}
 															imageSize="large"
@@ -655,8 +715,11 @@
 														/>
 													</div>
 												{/each}
+												{@render refCode(
+													[...new Set(group.images.nodes.map((node) => node?.reference).filter(Boolean))].join(', ')
+												)}
 												
-												<div class="relative h-[300px] lg:h-[430px] w-full lg:max-w-[800px]">
+												<div class="relative h-[300px] lg:h-[430px] w-full lg:max-w-[800px] print:hidden">
 													{#key previousImageIndex}
 														<div class="absolute inset-0 flex justify-center w-full h-full z-10">
 															<div class="relative h-full flex justify-center w-full">
@@ -742,6 +805,7 @@
 															onload={() => imageLoadStates[firstImageKey] = true}
 															loading="lazy"
 														/>
+														{@render refCode(group.images.nodes[0]?.reference)}
 													</div>
 												</div>
 
@@ -780,6 +844,7 @@
 																onload={() => imageLoadStates[secondImageKey] = true}
 																loading="lazy"
 															/>
+															{@render refCode(group.images.nodes[1]?.reference)}
 														</div>
 													</div>
 													<!-- For 3 images, show remaining images in alternating layout -->
@@ -818,6 +883,7 @@
 																		onload={() => imageLoadStates[imgKey] = true}
 																		loading="lazy"
 																	/>
+																	{@render refCode((image as any)?.reference)}
 																</div>
 															</div>
 															<div class="hidden lg:block col-start-2 row-span-1">
@@ -857,6 +923,7 @@
 																		onload={() => imageLoadStates[imgKey] = true}
 																		loading="lazy"
 																	/>
+																	{@render refCode((image as any)?.reference)}
 																</div>
 															</div>
 														{/if}
@@ -900,6 +967,7 @@
 																		onload={() => imageLoadStates[imgKey] = true}
 																		loading="lazy"
 																	/>
+																	{@render refCode((image as any)?.reference)}
 																</div>
 															</div>
 															<!-- Spacer -->
@@ -941,6 +1009,7 @@
 																		onload={() => imageLoadStates[imgKey] = true}
 																		loading="lazy"
 																	/>
+																	{@render refCode((image as any)?.reference)}
 																</div>
 															</div>
 															<!-- Spacer -->
@@ -995,6 +1064,7 @@
 																onload={() => imageLoadStates[lastImageKey] = true}
 																loading="lazy"
 															/>
+															{@render refCode(group.images.nodes[group.images.nodes.length - 1]?.reference)}
 														</div>
 													</div>
 												{/if}
@@ -1008,11 +1078,44 @@
 				{/if}
 			{/each}
 		{/if}
+
+		{#if block?.exhibitionRoom?.cabinets && Object.keys(credits).length}
+			<section class="print-credits hidden print:block {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
+				<h2 class={$language === 'ar' ? 'font-manchette' : 'font-boogy'}>
+					{$labelTranslations.listOfWorks[$language]}
+				</h2>
+				{#each block.exhibitionRoom.cabinets as cabinet}
+					{@const refs = getCabinetRefs(cabinet)}
+					{#if refs.length}
+						<h3>{$language === 'ar' ? cabinet.nameAr : cabinet.nameEn}</h3>
+						<ul>
+							{#each refs as ref}
+								{@const work = credits[ref]}
+								{@const publication = formatPublication(work, $language)}
+								{@const roles = formatRoles(work, $language)}
+								<li>
+									<span class="print-credits-ref">{work.ref}</span>
+									<div>
+										<p>
+											<em>{work.title?.trim()}</em>{#if work.author}. {work.author}{/if}{#if publication}. {publication}{/if}
+										</p>
+										{#if roles}<p>{roles}</p>{/if}
+										{#if work.collection}
+											<p>{$labelTranslations.collection[$language]}: {work.collection}</p>
+										{/if}
+									</div>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				{/each}
+			</section>
+		{/if}
 	</div>
 	{#if $isInfoOpen}
 		<div
 			transition:fly={{ x: 500, duration: 800 }}
-			class="fixed right-0 top-0 max-w-[500px] z-30 {$language === 'ar' ? 'dir-rtl' : ''} "
+			class="fixed right-0 top-0 max-w-[500px] z-30 print:hidden {$language === 'ar' ? 'dir-rtl' : ''} "
 		>
 			<button
 				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-30"
@@ -1126,7 +1229,7 @@
 			</div>
 		</div>
 	{:else}
-		<div transition:fly={{ x: 500, duration: 500 }}>
+		<div transition:fly={{ x: 500, duration: 500 }} class="print:hidden">
 			<button
 				class="fixed top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 3-40"
 				style="right: 0px"

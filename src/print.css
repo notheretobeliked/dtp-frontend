@@ -1,0 +1,286 @@
+/*
+	Print styles for learning hub singles (.print-article) and exhibition rooms
+	(.print-exhibition). Hiding site chrome is done inline with Tailwind
+	`print:hidden`.
+
+	Note: an A4 page is ~627 CSS px wide, i.e. below the `md` breakpoint, so the
+	mobile layout (gutters, stacked columns) is what gets printed.
+*/
+@media print {
+	@page {
+		size: A4;
+		margin: 18mm 20mm 20mm;
+
+		/* Page margin boxes: Chromium 131+; other browsers ignore them */
+		@bottom-center {
+			content: counter(page);
+			font-family: 'Martina Plantijn', serif;
+			font-size: 9pt;
+		}
+	}
+
+	html,
+	body {
+		background: #fff !important;
+	}
+
+	/* Narrow reading column */
+	.print-article {
+		width: 120mm;
+		max-width: 100%;
+		min-height: 0 !important;
+		margin: 0 auto;
+		padding: 0 !important;
+		background: #fff !important;
+	}
+
+	/* Drop the mobile gutters; the column sets the measure */
+	.print-article :is(p, h1, h2, h3, h4, h5, .mx-2) {
+		margin-inline: 0 !important;
+	}
+
+	.print-article .px-2 {
+		padding-inline: 0 !important;
+	}
+
+	/* Narrower images */
+	.print-article figure {
+		width: 75% !important;
+		margin: 6mm auto !important;
+	}
+
+	.print-article figure img {
+		width: auto !important;
+		height: auto !important;
+		max-width: 100%;
+		max-height: 90mm;
+	}
+
+	/* Transparent overlay from Image.svelte */
+	.print-article figure img[src^='data:'] {
+		display: none;
+	}
+
+	/* Page breaks */
+	.print-article :is(h1, h2, h3, h4, h5, .core-heading) {
+		break-after: avoid;
+		break-inside: avoid;
+	}
+
+	.print-article :is(figure, .core-image, .footnotes li) {
+		break-inside: avoid;
+	}
+
+	.print-article :is(p, li) {
+		orphans: 3;
+		widows: 3;
+	}
+
+	/* ---------------------------------------------------------------
+	   Exhibition rooms: room title + intro, then per cabinet its text
+	   followed by its images. Images use the full page width, text the
+	   narrow column.
+	--------------------------------------------------------------- */
+	.print-exhibition {
+		min-height: 0 !important;
+		padding: 0 !important;
+		background: #fff !important;
+	}
+
+	.print-exhibition .images {
+		width: 100%;
+	}
+
+	/* Previous/next room links below the exhibition */
+	.print-exhibition > .core-columns {
+		display: none !important;
+	}
+
+	.print-exhibition .basestyles {
+		max-width: 120mm;
+		margin: 0 auto 8mm;
+	}
+
+	.print-exhibition :is(h1, [id^='images-cabinet-'] > header) {
+		break-after: avoid;
+		break-inside: avoid;
+	}
+
+	.print-exhibition :is(p, li) {
+		orphans: 3;
+		widows: 3;
+	}
+
+	/* Each cabinet starts a new page */
+	/* Padding keeps the Arabic headings' dots, which rise above the line box,
+	   from bleeding onto the previous page */
+	.print-exhibition [id^='images-cabinet-'] {
+		break-before: page;
+		padding-top: 6mm;
+	}
+
+	.print-exhibition [id^='images-cabinet-'] > header {
+		margin-bottom: 6mm !important;
+	}
+
+	/* Strip on-screen spacing and load/scroll animation states */
+	.print-exhibition :is(.layout-miniatures, .layout-centered, .layout-organic, .layout-organic-landscape) {
+		margin: 0 0 8mm !important;
+		gap: 6mm !important;
+		visibility: visible !important;
+		opacity: 1 !important;
+	}
+
+	.print-exhibition .transition-opacity {
+		opacity: 1 !important;
+	}
+
+	.print-exhibition .images .absolute {
+		position: static !important;
+	}
+
+	.print-exhibition .images img[src^='data:'] {
+		display: none;
+	}
+
+	.print-exhibition .images [role='button'],
+	.print-exhibition .animation-frame {
+		break-inside: avoid;
+		transform: none !important;
+	}
+
+	/* Miniatures: small grid */
+	.print-exhibition .layout-miniatures {
+		gap: 3mm !important;
+	}
+
+	.print-exhibition .layout-miniatures > div {
+		width: 30mm !important;
+	}
+
+	.print-exhibition .layout-miniatures img {
+		width: 100% !important;
+		height: auto !important;
+	}
+
+	/* Centered and organic: each cabinet is one continuous two-column grid,
+	   so groups don't leave half-empty rows. Every image gets the same box
+	   (62mm tall or the column width), aligned to the start of its cell. */
+	.print-exhibition [id^='images-cabinet-'] {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 8mm;
+		align-items: start;
+	}
+
+	.print-exhibition [id^='images-cabinet-'] > * {
+		grid-column: 1 / -1;
+		margin-bottom: 0 !important;
+	}
+
+	.print-exhibition [id^='images-cabinet-'] > :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) {
+		display: contents !important;
+	}
+
+	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div {
+		grid-column: auto !important;
+		grid-row: auto !important;
+	}
+
+	/* Organic's spacer divs have no image; don't let them take grid cells */
+	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div:not(:has(img)) {
+		display: none !important;
+	}
+
+	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) div:has(img) {
+		display: flex !important;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: flex-start !important;
+		width: 100% !important;
+		height: auto !important;
+		transform: none !important;
+	}
+
+	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) img {
+		width: auto !important;
+		height: auto !important;
+		max-width: 100%;
+		max-height: 62mm;
+		margin: 0;
+	}
+
+	/* Animation: every frame as a grid */
+	.print-exhibition .layout-animation {
+		display: grid !important;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 3mm !important;
+		margin: 0 0 8mm !important;
+	}
+
+	.print-exhibition .animation-frame img {
+		width: 100% !important;
+		height: auto !important;
+	}
+
+	.print-exhibition .layout-animation > .print-ref {
+		grid-column: 1 / -1;
+	}
+
+	/* Reference code under each image, matching the list of works */
+	.print-exhibition .print-ref {
+		margin-top: 1.5mm;
+		font-family: 'Martina Plantijn', serif;
+		font-size: 7pt;
+		letter-spacing: 0.05em;
+		line-height: 1;
+	}
+
+	/* List of works at the end of the room: full width, two columns */
+	.print-exhibition .print-credits {
+		break-before: page;
+		padding-top: 6mm;
+		font-size: 7.5pt;
+		line-height: 1.3;
+	}
+
+	.print-credits h2 {
+		font-size: 20pt;
+		line-height: 1.1;
+		text-align: center;
+		margin-bottom: 8mm;
+	}
+
+	.print-credits h3 {
+		font-size: 8pt;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		padding-bottom: 1mm;
+		border-bottom: 0.5pt solid #000;
+		margin: 6mm 0 3mm;
+		break-after: avoid;
+	}
+
+	.print-credits ul {
+		columns: 2;
+		column-gap: 8mm;
+	}
+
+	.print-credits li {
+		display: grid;
+		grid-template-columns: 10mm 1fr;
+		gap: 1.5mm;
+		margin-bottom: 2mm;
+		break-inside: avoid;
+	}
+
+	.print-credits p {
+		font-size: inherit;
+		line-height: inherit;
+		margin: 0;
+	}
+
+	.print-credits-ref {
+		letter-spacing: 0.05em;
+	}
+}

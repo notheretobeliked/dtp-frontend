@@ -50,6 +50,7 @@
 	}
 
 	let isHomePage: boolean = $state(false)
+	let isExhibitionRoom = $derived(editorBlocks?.some((block) => block.name === 'acf/exhibition-room') ?? false)
 
 
 	function handleReadMore() {
@@ -79,11 +80,18 @@
 	data-post-content
 	class="{isHomePage ? 'pt-[56px] pb-0' : 'pt-24'} min-h-screen {bgColourClass} {isHomePage
 		? 'homepage'
-		: ''} {$language === 'ar' ? 'dir-rtl' : ''}"
+		: ''} {$language === 'ar' ? 'dir-rtl' : ''} {isLearningHubSingle ? 'print-article' : ''} {isExhibitionRoom ? 'print-exhibition' : ''}"
 >
+	{#if isLearningHubSingle || isExhibitionRoom}
+		<div class="hidden print:flex justify-between items-baseline text-black pb-2 mb-8 border-b border-black" dir="ltr">
+			<span class="font-boogy text-base">Decolonizing the page</span>
+			<span class="font-manchette font-extrabold text-base">جماليّات التحرّر</span>
+		</div>
+	{/if}
+
 	{#if isLearningHubSingle}
 		<div class="w-full max-w-screen-md mx-auto !px-0">
-			<div class="w-full mb-3 h-5 flex content-center">
+			<div class="w-full mb-3 h-5 flex content-center print:hidden">
 				<div class="w-full mb-3">
 					<a
 						class="cursor-pointer {$language === 'en'

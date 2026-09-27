@@ -140,5 +140,9 @@ export const labelTranslations = writable({
 	all: {
 		en: 'All',
 		ar: 'الكل'
+	},
+	listOfWorks: {
+		en: 'List of works',
+		ar: 'قائمة الأعمال'
 	}
 })
