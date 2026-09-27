@@ -24,6 +24,16 @@
 		background: #fff !important;
 	}
 
+	/* Set by $lib/utilities/print when Safari prints before all images loaded */
+	html.print-incomplete .print-incomplete-note {
+		display: block !important;
+		margin-bottom: 6mm;
+		padding: 2mm 3mm;
+		border: 0.5pt solid #000;
+		font-family: 'Martina Plantijn', serif;
+		font-size: 8pt;
+	}
+
 	/* Narrow reading column */
 	.print-article {
 		width: 120mm;
@@ -149,13 +159,24 @@
 		transform: none !important;
 	}
 
-	/* Miniatures: small grid */
+	/* Image layouts use inline blocks rather than grid/flex: Safari ignores
+	   break-inside on grid and flex items when printing and slices images
+	   across pages, but it never splits a line box. Each row of images is a
+	   line, so it moves to the next page whole. Widths leave ~2mm of slack for
+	   the space between inline blocks. */
+
+	/* Miniatures: rows of small thumbnails */
 	.print-exhibition .layout-miniatures {
-		gap: 3mm !important;
+		display: block !important;
+		text-align: center;
 	}
 
 	.print-exhibition .layout-miniatures > div {
+		display: inline-block !important;
+		vertical-align: top;
 		width: 30mm !important;
+		margin: 0 1mm 3mm;
+		text-align: start;
 	}
 
 	.print-exhibition .layout-miniatures img {
@@ -163,31 +184,25 @@
 		height: auto !important;
 	}
 
-	/* Centered and organic: each cabinet is one continuous two-column grid,
+	/* Centered and organic: cells flow through the whole cabinet two to a row,
 	   so groups don't leave half-empty rows. Every image gets the same box
 	   (62mm tall or the column width), aligned to the start of its cell. */
-	.print-exhibition [id^='images-cabinet-'] {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 8mm;
-		align-items: start;
+	.print-exhibition [id^='images-cabinet-'] > * {
+		margin-bottom: 0 !important;
 	}
 
-	.print-exhibition [id^='images-cabinet-'] > * {
-		grid-column: 1 / -1;
-		margin-bottom: 0 !important;
+	/* Rows of images (and list entries) are lines now: let a single row sit at
+	   the top or bottom of a page instead of pulling others along */
+	.print-exhibition :is([id^='images-cabinet-'], .layout-miniatures, .layout-animation, .print-credits ul) {
+		orphans: 1;
+		widows: 1;
 	}
 
 	.print-exhibition [id^='images-cabinet-'] > :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) {
 		display: contents !important;
 	}
 
-	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div {
-		grid-column: auto !important;
-		grid-row: auto !important;
-	}
-
-	/* Organic's spacer divs have no image; don't let them take grid cells */
+	/* Organic's spacer divs have no image */
 	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div:not(:has(img)) {
 		display: none !important;
 	}
@@ -202,6 +217,14 @@
 		transform: none !important;
 	}
 
+	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div:has(img) {
+		display: inline-flex !important;
+		vertical-align: top;
+		width: calc(50% - 2mm) !important;
+		padding-inline-end: 8mm;
+		margin: 0 0 8mm !important;
+	}
+
 	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) img {
 		width: auto !important;
 		height: auto !important;
@@ -210,21 +233,23 @@
 		margin: 0;
 	}
 
-	/* Animation: every frame as a grid */
+	/* Animation: every frame, four to a row */
 	.print-exhibition .layout-animation {
-		display: grid !important;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 3mm !important;
+		display: block !important;
 		margin: 0 0 8mm !important;
+	}
+
+	.print-exhibition .layout-animation > .animation-frame {
+		display: inline-block !important;
+		vertical-align: top;
+		width: calc(25% - 2mm);
+		padding-inline-end: 3mm;
+		margin-bottom: 3mm;
 	}
 
 	.print-exhibition .animation-frame img {
 		width: 100% !important;
 		height: auto !important;
-	}
-
-	.print-exhibition .layout-animation > .print-ref {
-		grid-column: 1 / -1;
 	}
 
 	/* Reference code under each image, matching the list of works */
@@ -261,17 +286,17 @@
 		break-after: avoid;
 	}
 
-	.print-credits ul {
-		columns: 2;
-		column-gap: 8mm;
-	}
-
+	/* Two columns as inline blocks (see image layouts above): Safari prints a
+	   multi-column list that spans pages as a single column. Reads across,
+	   row by row. */
 	.print-credits li {
-		display: grid;
+		display: inline-grid;
+		vertical-align: top;
+		width: calc(50% - 2mm);
+		padding-inline-end: 8mm;
 		grid-template-columns: 10mm 1fr;
 		gap: 1.5mm;
 		margin-bottom: 2mm;
-		break-inside: avoid;
 	}
 
 	.print-credits p {
