@@ -8,7 +8,7 @@
 </script>
 
 <div 
-  class="animate-pulse bg-gray-200 {className}"
+  class="animate-pulse bg-gray-200 print:hidden {className}"
   style="aspect-ratio: {aspectRatio};"
 >
   <div class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300"></div>

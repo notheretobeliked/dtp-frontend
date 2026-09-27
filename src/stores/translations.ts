@@ -140,5 +140,13 @@ export const labelTranslations = writable({
 	all: {
 		en: 'All',
 		ar: 'الكل'
+	},
+	listOfWorks: {
+		en: 'List of works',
+		ar: 'قائمة الأعمال'
+	},
+	printIncomplete: {
+		en: "Some images hadn't loaded yet. Print again for a complete copy.",
+		ar: 'لم يكتمل تحميل بعض الصور بعد. أعد الطباعة للحصول على نسخة كاملة.'
 	}
 })

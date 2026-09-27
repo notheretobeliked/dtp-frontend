@@ -130,7 +130,7 @@
 {/key}
 
 {#if $navigating}
-	<div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+	<div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 print:hidden">
 		<LoadingSpinner />
 	</div>
 {/if}
@@ -142,7 +142,7 @@
 <!-- Add this at the bottom of your template -->
 {#if showModal}
 	<div
-		class="fixed inset-0 z-50"
+		class="fixed inset-0 z-50 print:hidden"
 		onclick={closeModal}
 		onkeydown={handleKeydown}
 		role="button"

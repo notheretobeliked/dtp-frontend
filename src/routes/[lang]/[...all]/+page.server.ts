@@ -20,6 +20,46 @@ import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
 import type { EditorBlock } from '$lib/types/wp-types'
 import { flatListToHierarchical } from '$lib/server/utilities'
+import libraryData from '$lib/data/library-data.json'
+
+const creditFields = [
+	'ref',
+	'title',
+	'author',
+	'publisher',
+	'place',
+	'year',
+	'coverDesign',
+	'coverIllustration',
+	'coverCalligraphy',
+	'pageDesign',
+	'pageIllustration',
+	'pageCalligraphy',
+	'collection'
+] as const
+
+// Library records for the works shown in an exhibition room, keyed by
+// lowercased ref. Printed as the room's list of works.
+function getLibraryCredits(blocks: EditorBlock[], lang: string) {
+	const refs = new Set<string>()
+	for (const block of blocks as any[]) {
+		if (block.name !== 'acf/exhibition-room') continue
+		for (const cabinet of block.exhibitionRoom?.cabinets ?? [])
+			for (const group of cabinet?.groups ?? [])
+				for (const image of group?.images?.nodes ?? [])
+					if (image?.reference) refs.add(image.reference.toLowerCase())
+	}
+	if (!refs.size) return null
+
+	const credits: Record<string, Record<string, string | number | null>> = {}
+	for (const item of (libraryData as Record<string, any[]>)[lang] ?? []) {
+		const ref = item.ref?.toLowerCase()
+		if (ref && refs.has(ref)) {
+			credits[ref] = Object.fromEntries(creditFields.map((field) => [field, item[field] ?? null]))
+		}
+	}
+	return credits
+}
 
 export const load: PageServerLoad = async function load({ params, url, fetch }) {
 	const uri = `/${params.all || ''}`
@@ -97,6 +137,8 @@ export const load: PageServerLoad = async function load({ params, url, fetch }) 
 			? flatListToHierarchical(data.nodeByUri.editorBlocks)
 			: []
 
+		const libraryCredits = getLibraryCredits(editorBlocks, params.lang)
+
 		return {
 			data: data,
 			uri: uri,
@@ -108,6 +150,9 @@ export const load: PageServerLoad = async function load({ params, url, fetch }) 
 			}),
 			...(isLearningHubSingle && {
 				isLearningHubSingle
+			}),
+			...(libraryCredits && {
+				libraryCredits
 			})
 		}
 	} catch (err: unknown) {
