@@ -328,7 +328,7 @@ fragment CommonBlockFields on EditorBlock {
 			fontFamily
 			fontSize
 			textColor
-			textAlign
+			cssClassName
 			level
 			align
 		}

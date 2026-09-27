@@ -3,21 +3,39 @@
 	import { classNames } from '$lib/utilities/utilities'
 	import { language } from '$stores/language'
 
+	// Headings built in code (e.g. ExhibitionRoom) still pass `textAlign`, which
+	// WP 7.0 removed from the generated CoreHeading attributes.
+	type HeadingAttributes = NonNullable<CoreHeading['attributes']> & {
+		textAlign?: string | null
+	}
+	type HeadingBlock = Omit<CoreHeading, 'attributes'> & { attributes?: HeadingAttributes | null }
+
 	interface Props {
-		block: CoreHeading;
+		block: HeadingBlock;
 	}
 
 	let { block }: Props = $props();
 
+	const attributes: Partial<HeadingAttributes> = block.attributes ?? {}
 	const {
 		content = '',
 		fontSize = 'base',
 		textColor = '',
-		textAlign = 'left',
 		level = 1,
 		fontFamily = null,
-		className = ''
-	} = block.attributes ?? {}
+		className = '',
+		cssClassName = ''
+	} = attributes
+
+	// WP 7.0 removed the `textAlign` attribute from core/heading: alignment now
+	// only reaches us as the has-text-align-* class on cssClassName (the rendered
+	// class string). Blocks built in code (e.g. ExhibitionRoom) still pass
+	// `textAlign` directly, so that wins when present.
+	const alignMatch = /has-text-align-(center|right|left)/.exec(`${cssClassName ?? ''} ${className ?? ''}`)
+	const textAlign = attributes.textAlign ?? alignMatch?.[1] ?? 'left'
+
+	// Strip the WordPress alignment classes; classNames() emits the Tailwind equivalent.
+	const customClassName = (className ?? '').replace(/has-text-align-(center|right|left)/g, '').trim()
 	
 	// Make these reactive with $derived
 	const finalAlign = $derived(textAlign === 'center' ? 'center' : $language === 'ar' ? 'right' : textAlign)
@@ -58,20 +76,20 @@
 
 {#if level === 1}
 	<h1
-		class="{headingClasses} {className} mb-1 md:mb-3 lg:mb-4 mx-2 lg:mx-0"
+		class="{headingClasses} {customClassName} mb-1 md:mb-3 lg:mb-4 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h1>{/if}
 {#if level === 2}
 	<h2
-		class="{headingClasses} {className} pb-1 border-b border-black mt-2 md:mt-5 mb-2 md:mb-3 mx-2 lg:mx-0"
+		class="{headingClasses} {customClassName} pb-1 border-b border-black mt-2 md:mt-5 mb-2 md:mb-3 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h2>
 {/if}
 {#if level === 3}
 	<h3
-		class="{headingClasses} {className} {$language === 'en' ? 'tracking-wider' : ''} uppercase mb-2 md:mb-3 mx-2 lg:mx-0"
+		class="{headingClasses} {customClassName} {$language === 'en' ? 'tracking-wider' : ''} uppercase mb-2 md:mb-3 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h3>
@@ -79,7 +97,7 @@
 
 {#if level === 4}
 	<h4
-		class="{headingClasses} {className} {$language === 'en' ? 'tracking-widest' : ''} uppercase mb-1 mx-2 lg:mx-0"
+		class="{headingClasses} {customClassName} {$language === 'en' ? 'tracking-widest' : ''} uppercase mb-1 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h4>
@@ -87,7 +105,7 @@
 
 {#if level === 5}
 	<h5
-		class="{headingClasses} {className} {$language === 'en' ? 'tracking-widest' : ''} uppercase mb-3 mx-2 lg:mx-0"
+		class="{headingClasses} {customClassName} {$language === 'en' ? 'tracking-widest' : ''} uppercase mb-3 mx-2 lg:mx-0"
 	>
 		{@html content}
 	</h5>
