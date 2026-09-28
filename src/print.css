@@ -86,6 +86,64 @@
 		widows: 3;
 	}
 
+	/* Footnote "↩" back-links do nothing on paper */
+	.print-article .footnotes a[href$='-link'] {
+		display: none;
+	}
+
+	/* Home page: just the introduction (headline, subheadline, text), in the
+	   same narrow column as learning hub posts. Room links, images and the
+	   read-more button are dropped; links print as plain text. */
+	.homepage :is(#homepage-container, #homepage-container > div, #homepage-container .grid) {
+		display: block !important;
+		height: auto !important;
+		max-height: none !important;
+		overflow: visible !important;
+	}
+
+	.homepage #homepage-container .grid > div:first-child {
+		display: none !important;
+	}
+
+	.homepage #homepage-container .grid > div:last-child {
+		max-width: none !important;
+		max-height: none !important;
+		overflow: visible !important;
+		padding: 0 !important;
+	}
+
+	.homepage :is(img, figure, .core-image, .core-embed, .core-buttons) {
+		display: none !important;
+	}
+
+	.homepage a {
+		color: inherit !important;
+		border: 0 !important;
+		text-decoration: none !important;
+	}
+
+	/* Citation closing every printout */
+	.print-citation {
+		margin-top: 10mm;
+		padding-top: 2mm;
+		border-top: 0.5pt solid #000;
+		font-size: 8pt !important;
+		line-height: 1.4;
+		break-inside: avoid;
+	}
+
+	.print-exhibition .print-citation {
+		max-width: none;
+	}
+
+	.print-citation-label {
+		display: block;
+		margin-bottom: 1mm;
+		font-size: 7pt;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+	}
+
 	/* ---------------------------------------------------------------
 	   Exhibition rooms: room title + intro, then per cabinet its text
 	   followed by its images. Images use the full page width, text the

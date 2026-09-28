@@ -11,6 +11,7 @@
 	import type { PageData } from './$types'
 	import { slide } from 'svelte/transition'
 	import LoadingSpinner from '$components/atoms/LoadingSpinner.svelte'
+	import PrintCitation from '$components/atoms/PrintCitation.svelte'
 	import { setupPrint } from '$lib/utilities/print'
 	interface Props {
 		data: PageData;
@@ -54,6 +55,13 @@
 	let isHomePage: boolean = $state(false)
 	let isExhibitionRoom = $derived(editorBlocks?.some((block) => block.name === 'acf/exhibition-room') ?? false)
 
+	// Learning hub bylines read like "Foreword by Hala Auji"; cite the name only
+	let citationAuthor = $derived(
+		isLearningHubSingle
+			? data.data.nodeByUri?.learningHubFields?.byline?.replace(/^.*\bby\s+/i, '') || null
+			: $labelTranslations.curator[$language]
+	)
+
 	let postContent: HTMLElement | undefined = $state()
 	let preparingPrint = $state(false)
 
@@ -91,7 +99,7 @@
 	data-post-content
 	class="{isHomePage ? 'pt-[56px] pb-0' : 'pt-24'} min-h-screen {bgColourClass} {isHomePage
 		? 'homepage'
-		: ''} {$language === 'ar' ? 'dir-rtl' : ''} {isLearningHubSingle ? 'print-article' : ''} {isExhibitionRoom ? 'print-exhibition' : ''}"
+		: ''} {$language === 'ar' ? 'dir-rtl' : ''} {isLearningHubSingle || isHomePage ? 'print-article' : ''} {isExhibitionRoom ? 'print-exhibition' : ''}"
 >
 	{#if isLearningHubSingle || isExhibitionRoom}
 		<div class="hidden print:flex justify-between items-baseline text-black pb-2 mb-8 border-b border-black" dir="ltr">
@@ -167,6 +175,10 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if isLearningHubSingle || isExhibitionRoom || isHomePage}
+		<PrintCitation author={citationAuthor} title={isHomePage ? null : data.data.nodeByUri?.title} />
+	{/if}
 </div>
 
 <style>
