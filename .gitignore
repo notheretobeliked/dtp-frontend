@@ -11,3 +11,4 @@ vite.config.ts.timestamp-*
 /src/lib/data/library-data.json
 /src/lib/data/taxonomies.json
 /static/sitemap.xml
+/.vercel
