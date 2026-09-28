@@ -145,6 +145,22 @@ export const labelTranslations = writable({
 		en: 'List of works',
 		ar: 'قائمة الأعمال'
 	},
+	citeAs: {
+		en: 'Cite as',
+		ar: 'للاستشهاد'
+	},
+	accessed: {
+		en: 'accessed',
+		ar: 'تاريخ الاطلاع'
+	},
+	siteName: {
+		en: 'Decolonizing the Page',
+		ar: 'جماليّات التحرّر'
+	},
+	curator: {
+		en: 'Zeina Maasri',
+		ar: 'زينة معاصري'
+	},
 	printIncomplete: {
 		en: "Some images hadn't loaded yet. Print again for a complete copy.",
 		ar: 'لم يكتمل تحميل بعض الصور بعد. أعد الطباعة للحصول على نسخة كاملة.'

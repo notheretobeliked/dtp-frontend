@@ -30,7 +30,7 @@
 </script>
 
 <div>
-	<div class="flex justify-center mt-8 mb-8">
+	<div class="flex justify-center mt-8 mb-8 print:hidden">
 		<button 
 			onclick={toggleContent}
 			onkeydown={(e) => e.key === 'Enter' && toggleContent()}
@@ -45,14 +45,13 @@
 			/>
 		</button>
 	</div>
+	<!-- Always rendered so the full text prints; hidden on screen until expanded -->
 	<div class="content-wrapper" id="more">
-		{#if showFullContent}
-		<div class="pb-12">
-            {#each block.children as childBlock}
-					<BlockRenderer block={childBlock} />
-				{/each}
-			</div>
-		{/if}
+		<div class="pb-12 print:block" class:hidden={!showFullContent}>
+			{#each block.children as childBlock}
+				<BlockRenderer block={childBlock} />
+			{/each}
+		</div>
 	</div>
 </div>
 
