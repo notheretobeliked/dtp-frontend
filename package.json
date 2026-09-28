@@ -18,7 +18,7 @@
 		"@graphql-codegen/typescript": "^4.1.0",
 		"@graphql-codegen/typescript-generic-sdk": "^4.0.1",
 		"@graphql-codegen/typescript-operations": "^4.3.0",
-		"@sveltejs/adapter-auto": "^3.2.5",
+		"@sveltejs/adapter-vercel": "^6.3.4",
 		"@sveltejs/kit": "^2.6.4",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@types/eslint": "^8.56.12",
@@ -44,6 +44,9 @@
 		"vite": "^5.4.8"
 	},
 	"type": "module",
+	"engines": {
+		"node": "24.x"
+	},
 	"dependencies": {
 		"@tailwindcss/container-queries": "^0.1.1",
 		"openseadragon": "^5.0.0",

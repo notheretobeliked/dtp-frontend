@@ -1,0 +1,7 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"rewrites": [
+		{ "source": "/api/plas/script.js", "destination": "https://plausible.io/js/script.js" },
+		{ "source": "/api/plas/event", "destination": "https://plausible.io/api/event" }
+	]
+}
