@@ -165,7 +165,6 @@
 				{:else}
 					<div
 						class="image-group layout-{group.layout}"
-						class:two-column={group.layout === 'organic' && group.images.length > 2}
 						style:--widest-aspect-ratio={group.widestAspectRatio}
 					>
 						{#each group.images as image, i}
@@ -235,11 +234,13 @@
 		width: min(100%, var(--max-height) * var(--aspect-ratio));
 	}
 
-	/* Organic: all images of a group share one height, so a book's cover and
-	   its spreads stay in scale. That height is as tall as allowed, unless the
-	   widest image would then outgrow the space it has: the full width here,
-	   one of two columns on wide screens. */
+	/* Organic: the design constrains images by width. The widest image of a
+	   group gets that width and the others share its height, so a book's cover
+	   stays in scale with its spreads. --max-height keeps groups of narrow
+	   images from growing too tall. The width is the full page here and one of
+	   two columns on wide screens. */
 	.layout-organic {
+		--max-width: 100cqw;
 		container-type: inline-size;
 		display: flex;
 		flex-direction: column;
@@ -248,7 +249,7 @@
 	}
 
 	.layout-organic .tile {
-		height: min(var(--max-height), 100cqw / var(--widest-aspect-ratio));
+		height: min(var(--max-height), var(--max-width) / var(--widest-aspect-ratio));
 	}
 
 	@media (min-width: theme('screens.lg')) {
@@ -262,13 +263,10 @@
 
 		.layout-organic {
 			--column-gap: 1rem;
+			--max-width: calc(50cqw - var(--column-gap) / 2);
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			gap: 2rem var(--column-gap);
-		}
-
-		.layout-organic.two-column .tile {
-			height: min(var(--max-height), (50cqw - var(--column-gap) / 2) / var(--widest-aspect-ratio));
 		}
 
 		/* See organicPlacement() */
