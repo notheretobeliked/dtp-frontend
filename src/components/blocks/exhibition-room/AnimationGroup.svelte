@@ -60,8 +60,12 @@
 </button>
 
 <style>
+	/* Pointer events are off so the frames can't be saved from the page; see
+	   the tiles in ExhibitionRoom.svelte */
 	.animation-frame {
 		opacity: 0;
+		pointer-events: none;
+		-webkit-touch-callout: none;
 	}
 
 	.animation-frame.previous {

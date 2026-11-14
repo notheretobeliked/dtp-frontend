@@ -14,8 +14,6 @@ export type GroupLayout = (typeof GROUP_LAYOUTS)[number]
 
 export interface RoomImage {
 	src: string
-	/** Sharper alternative for high-density screens, where one is needed */
-	srcset: string | undefined
 	width: number
 	height: number
 	/** width / height */
@@ -54,14 +52,19 @@ export const cabinetImagesId = (slug: string) => `images-cabinet-${slug}`
 
 /*
 	WordPress caps its image sizes by height: medium is 400px tall, medium_large
-	800px. Miniatures are about 250px tall on screen and every other layout at
-	most 430px, so these stay sharp without fetching the 1400px files.
+	800px. Every layout but miniatures shows images up to 430px tall, so the
+	800px file keeps them sharp without fetching the 1400px one.
+
+	Miniatures are 180px wide and the 400px file is about 280px wide for a
+	typical cover. That is a little soft on the densest phone screens, but the
+	next size up weighs over twice as much and a room can hold more than a
+	hundred miniatures.
 */
-const IMAGE_SIZES: Record<GroupLayout, { standard: string; highDensity?: string }> = {
-	miniatures: { standard: 'medium', highDensity: 'medium_large' },
-	centered: { standard: 'medium_large' },
-	animation: { standard: 'medium_large' },
-	organic: { standard: 'medium_large' }
+const IMAGE_SIZES: Record<GroupLayout, string> = {
+	miniatures: 'medium',
+	centered: 'medium_large',
+	animation: 'medium_large',
+	organic: 'medium_large'
 }
 
 /** `reference` is added to media items by the ExhibitionRoom block in WordPress */
@@ -90,13 +93,10 @@ function toImage(media: RoomMediaItem, layout: GroupLayout): RoomImage | null {
 		width: media.mediaDetails?.width ?? 0,
 		height: media.mediaDetails?.height ?? 0
 	}
-	const { standard, highDensity } = IMAGE_SIZES[layout]
-	const file = findSize(media, standard) ?? original
-	const sharper = highDensity ? findSize(media, highDensity) : undefined
+	const file = findSize(media, IMAGE_SIZES[layout]) ?? original
 
 	return {
 		src: file.src,
-		srcset: sharper ? `${file.src} 1x, ${sharper.src} 2x` : undefined,
 		width: file.width,
 		height: file.height,
 		aspectRatio: file.width && file.height ? file.width / file.height : 1,

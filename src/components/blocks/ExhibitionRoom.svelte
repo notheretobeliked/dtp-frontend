@@ -121,7 +121,6 @@
 			class:drop-shadow-lg={shadow}
 			use:fadeInWhenLoaded
 			src={image.src}
-			srcset={image.srcset}
 			width={image.width}
 			height={image.height}
 			alt={image.alt}
@@ -215,6 +214,14 @@
 
 	.tile:enabled:hover {
 		transform: scale(1.01);
+	}
+
+	/* The researchers asked that the images can't be saved from the page. With
+	   pointer events off, a right-click, long-press or drag lands on the tile
+	   and not on the image, so the browser offers nothing to save. */
+	.tile img {
+		pointer-events: none;
+		-webkit-touch-callout: none;
 	}
 
 	/* Miniatures: fixed width, as many to a row as fit */
