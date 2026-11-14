@@ -74,22 +74,35 @@
 	interface Placement {
 		column: 'both' | 'left' | 'right'
 		row: number
+		rowSpan: number
 	}
 
 	/**
 	 * Where an image sits in an organic group on wide screens. The first image
-	 * is centred, the following ones alternate left and right of the centre
-	 * line (mirrored on Arabic pages), each starting half an image lower than
+	 * is centred. The ones after it are staggered: they alternate left and right
+	 * of the centre line (mirrored on Arabic pages), each starting part-way down
 	 * the one before. From four images up, the last one is centred again.
+	 *
+	 * The stagger is counted in grid rows, which all come out the same height.
+	 * In a group of three, an image is two rows tall and the next starts one row
+	 * down, so half-way. Longer groups stack several images in each column, and
+	 * get more air: an image is three rows tall and the next starts two rows
+	 * down, which leaves an empty row between the images of one column.
 	 */
 	function organicPlacement(index: number, count: number): Placement {
-		const isStaggered = count > 2
-		const isClosing = count > 3 && index === count - 1
+		const centred = (row: number): Placement => ({ column: 'both', row, rowSpan: 1 })
+		if (count < 3 || index === 0) return centred(index + 1)
 
-		if (!isStaggered || index === 0) return { column: 'both', row: index + 1 }
-		// Staggered images span two rows, so the closing image starts two rows down
-		if (isClosing) return { column: 'both', row: index + 2 }
-		return { column: index % 2 ? 'left' : 'right', row: index + 1 }
+		const hasClosingImage = count > 3
+		const staggeredCount = hasClosingImage ? count - 2 : count - 1
+		const { rowSpan, step } = hasClosingImage ? { rowSpan: 3, step: 2 } : { rowSpan: 2, step: 1 }
+		const firstRow = 2
+		const rowOf = (position: number) => firstRow + position * step
+
+		if (hasClosingImage && index === count - 1) {
+			return centred(rowOf(staggeredCount - 1) + rowSpan)
+		}
+		return { column: index % 2 ? 'left' : 'right', row: rowOf(index - 1), rowSpan }
 	}
 </script>
 
@@ -99,6 +112,7 @@
 		class="tile {placement?.column ?? ''}"
 		style:--aspect-ratio={image.aspectRatio}
 		style:--row={placement?.row}
+		style:--row-span={placement?.rowSpan}
 		disabled={!image.reference}
 		onclick={() => ($activeBook = image.reference)}
 	>
@@ -272,12 +286,8 @@
 		/* See organicPlacement() */
 		.layout-organic .tile {
 			grid-column: 1 / -1;
-			grid-row: var(--row);
+			grid-row: var(--row) / span var(--row-span);
 			justify-self: center;
-		}
-
-		.layout-organic .tile:is(.left, .right) {
-			grid-row: var(--row) / span 2;
 		}
 
 		/* Left and right images hug the centre line */
