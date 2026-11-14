@@ -1,1256 +1,299 @@
+<!--
+	An exhibition room (the `acf/exhibition-room` block): a long page of book
+	images, arranged in cabinets, with the room's texts in a side panel.
+
+	Each cabinet holds groups of images, and each group has one of four layouts:
+	  miniatures  a wrapping row of small covers
+	  centered    one large image per row
+	  organic     a loose pile: a book's cover with its spreads staggered below
+	  animation   images shown one after another in the same spot
+
+	All image sizes are set in CSS from the aspect ratios in the data, so the
+	page keeps its shape while the images load. Clicking an image opens the
+	book's library record.
+-->
 <script lang="ts">
+	import { inview } from 'svelte-inview'
+	import type { AcfExhibitionRoom } from '$lib/graphql/generated'
+	import { buildRoom, cabinetImagesId, type RoomImage } from '$lib/utilities/exhibitionRoom'
+	import { activeBook } from '$stores/activeBook'
+	import { language } from '$stores/language'
+	import AnimationGroup from './exhibition-room/AnimationGroup.svelte'
+	import InfoPanel from './exhibition-room/InfoPanel.svelte'
+	import RoomTitle from './exhibition-room/RoomTitle.svelte'
+	import WorksList from './exhibition-room/WorksList.svelte'
+
 	interface Props {
 		block: AcfExhibitionRoom
 	}
 
 	let { block }: Props = $props()
 
-	import { preventDefault } from 'svelte/legacy'
+	const room = $derived(buildRoom(block.exhibitionRoom))
+	const isArabic = $derived($language === 'ar')
 
-	import { onDestroy, onMount } from 'svelte'
-	import type { AcfExhibitionRoom, MediaItem } from '$lib/graphql/generated'
-	import type { ObserverEventDetails, ScrollDirection, Options } from 'svelte-inview'
-	import { language } from '$stores/language'
+	// The cabinet currently on screen (its slug), or null at the top of the
+	// room. The info panel scrolls its text to match.
+	let activeCabinet = $state<string | null>(null)
 
-	import { fade } from 'svelte/transition'
-	import CoreHeading from './CoreHeading.svelte'
-	import Image from '$components/Image.svelte'
-	import ImageSkeleton from '$components/atoms/ImageSkeleton.svelte'
-	import { activeBook } from '$stores/activeBook'
-	import { labelTranslations } from '$stores/translations'
-	import { page } from '$app/stores'
-	import { isInfoOpen } from '$stores/infoPanel'
-	import { inview } from 'svelte-inview'
-	let isInView: boolean = $state()
-	let scrollDirection: Direction | undefined // Update this line
+	// Loading bar: fills up while the first few images arrive, then goes away.
+	const LOADING_BAR_IMAGES = 8
+	let settledImages = $state(0)
+	const awaitedImages = $derived(
+		Math.min(room.cabinets[0]?.groups[0]?.images.length ?? 0, LOADING_BAR_IMAGES)
+	)
+	const loadingProgress = $derived(awaitedImages ? Math.min(settledImages / awaitedImages, 1) : 1)
 
-	// Loading state management
-	let imageLoadStates = $state<Record<string, boolean>>({})
-	
-	// Helper to generate unique image keys
-	function getImageKey(cabinetIndex: number, groupIndex: number, imageIndex: number): string {
-		return `c${cabinetIndex}_g${groupIndex}_i${imageIndex}`
-	}
+	/** Counts the images inside `node` that have loaded. Failed ones count too, so the bar can't get stuck. */
+	function countSettledImages(node: HTMLElement) {
+		settledImages = [...node.querySelectorAll('img')].filter((img) => img.complete).length
+		const onSettled = () => (settledImages += 1)
 
-	// Computed loading states using $derived instead of $effect to avoid reactive loops
-	const totalImages = $derived(
-		block?.exhibitionRoom?.cabinets?.reduce((total, cabinet) => 
-			total + (cabinet?.groups?.reduce((groupTotal, group) => 
-				groupTotal + (group?.images?.nodes?.length || 0), 0) || 0), 0) || 0
-	);
-	
-	const loadedImages = $derived(Object.values(imageLoadStates).filter(Boolean).length);
-	
-	const allImagesLoaded = $derived(loadedImages === totalImages && totalImages > 0);
-	
-	const initialBatchSize = $derived(
-		Math.min(
-			block?.exhibitionRoom?.cabinets?.[0]?.groups?.[0]?.images?.nodes?.length || 8, 
-			8
-		)
-	);
-	
-	const initialBatchLoaded = $derived(loadedImages >= initialBatchSize && totalImages > 0);
-	
-	// Debug logging effect (separate from state calculations)
-	$effect(() => {
-		if (loadedImages !== totalImages) {
-			console.log(`Image loading progress: ${loadedImages}/${totalImages} (initial batch: ${loadedImages}/${initialBatchSize})`, {
-				loadedImages,
-				totalImages,
-				initialBatchSize,
-				allImagesLoaded,
-				initialBatchLoaded,
-				imageLoadStates: Object.keys(imageLoadStates).length
-			})
-		}
-	})
+		// `load` and `error` don't bubble, so listen in the capture phase
+		node.addEventListener('load', onSettled, true)
+		node.addEventListener('error', onSettled, true)
 
-	// Process groups to update layout based on aspect ratio (aspect ratios are now pre-calculated on server)
-	if (block?.exhibitionRoom?.cabinets) {
-		block.exhibitionRoom.cabinets.forEach((cabinet) => {
-			if (cabinet?.groups) {
-				cabinet.groups?.forEach((group) => {
-					if (!group || !group.layout) return
-
-					if (group?.layout[0] === 'organic' && group.images?.nodes?.[0]) {
-						// Skip landscape check if there are only 2 images
-						if (group.images.nodes.length <= 2) return
-
-						const firstImage = group.images.nodes[0]
-						const largeSize = firstImage.mediaDetails?.sizes?.find(
-							(size) => size && size.name === 'large'
-						)
-
-						if (largeSize?.width && largeSize?.height) {
-							const firstAspectRatio = parseInt(largeSize.width) / parseInt(largeSize.height)
-
-							// More lenient check - consider images close to square (ratio > 0.9) as potential landscape books
-							if (firstAspectRatio > 0.9) {
-								// Check next two images if they exist
-								const nextImages = group.images.nodes.slice(1, 3) as MediaItem[]
-								const isLandscapeBook = nextImages.some((image) => {
-									const imgLargeSize = image?.mediaDetails?.sizes?.find(
-										(size) => size?.name === 'large'
-									)
-									if (imgLargeSize?.width && imgLargeSize?.height) {
-										const aspectRatio = parseInt(imgLargeSize.width) / parseInt(imgLargeSize.height)
-										// Lower threshold to detect more books as landscape
-										return aspectRatio > 1.3 // Less restrictive than 1.8
-									}
-									return false
-								})
-
-								if (isLandscapeBook) {
-									group.layout[0] = 'organic-landscape'
-								}
-							}
-						}
-					}
-				})
-			}
-		})
-	}
-	const options: Options = {
-		rootMargin: '-50px',
-		unobserveOnEnter: true
-	}
-
-	const handleCabinetLinkClick = (e: Event, cabinetId: string) => {
-		e.preventDefault()
-		if (cabinetId === '#') {
-			window.scrollTo({ top: 0, behavior: 'smooth' })
-		} else {
-			const element = document.getElementById(`images-cabinet-${cabinetId}`)
-			if (element) {
-				element.scrollIntoView({ behavior: 'smooth' })
-			}
-		}
-	}
-
-	const handleChange = ({ detail }: CustomEvent<ObserverEventDetails>) => {
-		isInView = detail.inView
-		scrollDirection = detail.scrollDirection.vertical
-	}
-
-	const handleHeaderInView = ({ detail }: CustomEvent<ObserverEventDetails>) => {
-		if (detail.inView) {
-			lastVisibleSection = 'room-intro'
-			const introElement = document.getElementById('room-intro')
-			// Use get() to access store value in non-reactive context
-			let currentValue: boolean = false
-			const unsubscribe = isInfoOpen.subscribe((value) => {
-				currentValue = value
-			})
-			unsubscribe()
-			if (introElement && currentValue) {
-				introElement.scrollIntoView({ behavior: 'smooth' })
-			}
-		}
-	}
-
-	const handleCabinetInView =
-		(cabinetId: string) =>
-		({ detail }: CustomEvent<ObserverEventDetails>) => {
-			if (detail.inView) {
-				lastVisibleSection = `text-${cabinetId}`
-				const textElement = document.getElementById(`text-${cabinetId}`)
-				// Use get() to access store value in non-reactive context
-				let currentValue: boolean = false
-				const unsubscribe = isInfoOpen.subscribe((value) => {
-					currentValue = value
-				})
-				unsubscribe()
-				if (textElement && currentValue) {
-					textElement.scrollIntoView({ behavior: 'smooth' })
-				}
-			}
-		}
-	// Add interval for animation
-	let animationInterval: ReturnType<typeof setInterval> = $state()
-
-	let currentImageIndex = $state(0)
-	let previousImageIndex = $state(0)
-
-	const startAnimation = (nodes: any[]) => {
-		if (animationInterval) clearInterval(animationInterval)
-		animationInterval = setInterval(() => {
-			previousImageIndex = currentImageIndex
-			currentImageIndex = (currentImageIndex + 1) % nodes.length
-		}, 2000) // Changed to 3 seconds to give time for fade
-	}
-
-	import { fly } from 'svelte/transition'
-
-	let infoDiv: HTMLElement
-	let lastVisibleSection: string = 'room-intro' // Default to room intro
-
-	let buttonPosition: number
-
-	const updateButtonPosition = () => {
-		if (infoDiv) {
-			const rect = infoDiv.getBoundingClientRect()
-			buttonPosition = rect.left
-		}
-	}
-
-	const toggleInfo = () => {
-		isInfoOpen.toggle()
-		// Get the new value after toggle
-		let newValue: boolean = false
-		const unsubscribe = isInfoOpen.subscribe((value) => {
-			newValue = value
-		})
-		unsubscribe()
-		
-		if (newValue) {
-			setTimeout(() => {
-				const element = document.getElementById(lastVisibleSection)
-				if (element) {
-					element.scrollIntoView({ behavior: 'smooth' })
-				}
-			}, 50) // Slightly longer than the fly transition duration (800ms)
-		}
-	}
-
-	// Clean up interval on component destroy
-
-	onDestroy(() => {
-		if (animationInterval) clearInterval(animationInterval)
-	})
-
-	// Preload critical images and pre-calculate dimensions
-	onMount(() => {
-		updateButtonPosition()
-		window.addEventListener('resize', updateButtonPosition)
-
-		// Preload first cabinet's images
-		const firstCabinet = block?.exhibitionRoom?.cabinets?.[0]
-		if (firstCabinet?.groups?.[0]?.images?.nodes) {
-			firstCabinet.groups[0].images.nodes.slice(0, 3).forEach((image: any) => {
-				if (image?.sourceUrl) {
-					const img = document.createElement('img')
-					img.src = image.sourceUrl
-				}
-			})
-		}
-
-		// Pre-calculate heights for organic-landscape layouts (desktop only)
-		if (window.innerWidth >= 1024) {
-			const estimatedWidth = window.innerWidth * 0.45
-			
-			block?.exhibitionRoom?.cabinets?.forEach((cabinet, cabinetIndex) => {
-				cabinet?.groups?.forEach((group, groupIndex) => {
-					if (group?.layout?.[0] === 'organic-landscape' && group?.images?.nodes?.length) {
-						const groupKey = getGroupId(cabinetIndex, groupIndex)
-						groupHeights[groupKey] = precalculateGroupHeight(group, estimatedWidth)
-						// Don't set normalized to true immediately - wait for DOM measurements
-						// normalizedGroups[groupKey] = true
-					}
-				})
-			})
-
-			// Setup actual DOM measurements after a delay (desktop only)
-			setTimeout(() => {
-				if (!block?.exhibitionRoom?.cabinets) return
-				
-				block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
-					if (!cabinet?.groups) return
-					
-					cabinet.groups.forEach((group, groupIndex) => {
-						if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length) return
-						
-						const groupKey = getGroupId(cabinetIndex, groupIndex)
-						
-						const containers = document.querySelectorAll(`.group-${groupKey} .img-container`)
-						if (containers.length === 0) {
-							// If no containers found, use pre-calculated height and show
-							normalizedGroups[groupKey] = true
-							return
-						}
-						
-						const calculatedHeights: number[] = []
-						
-						containers.forEach((container, i) => {
-							if (!group?.images?.nodes) return
-	                        
-							const imageIndex = i === containers.length - 1 && containers.length > 3 
-								? group.images.nodes.length - 1
-								: i === 0 ? 0 : (i < 3 ? i : i - 1)
-								
-							const image = group.images.nodes[imageIndex]
-							const aspectRatio = getImageAspectRatio(image)
-							const containerWidth = (container as HTMLElement).offsetWidth
-							
-							const expectedHeight = containerWidth / aspectRatio
-							calculatedHeights.push(expectedHeight)
-						})
-						
-						if (calculatedHeights.length > 0) {
-							const minHeight = Math.min(...calculatedHeights)
-							// Only update if the new calculation is significantly different
-							if (Math.abs(groupHeights[groupKey] - minHeight) > 10) {
-								groupHeights[groupKey] = minHeight
-							}
-						}
-						
-						// Always show the group after measurement
-						normalizedGroups[groupKey] = true
-					})
-				})
-			}, 400)
-		} else {
-			// On mobile, calculate height normalization for organic-landscape groups
-			setTimeout(() => {
-				if (!block?.exhibitionRoom?.cabinets) return
-				
-				block.exhibitionRoom.cabinets.forEach((cabinet, cabinetIndex) => {
-					if (!cabinet?.groups) return
-					
-					cabinet.groups.forEach((group, groupIndex) => {
-						if (!group?.layout || group.layout[0] !== 'organic-landscape' || !group.images?.nodes?.length || group.images.nodes.length < 2) {
-							// For non-organic-landscape or single image groups, show immediately
-							const groupKey = getGroupId(cabinetIndex, groupIndex)
-							normalizedGroups[groupKey] = true
-							return
-						}
-						
-						const groupKey = getGroupId(cabinetIndex, groupIndex)
-						
-						// Find subsequent landscape images (skip first image which is usually square/portrait)
-						const landscapeImages = group.images.nodes.slice(1).filter((image: any) => {
-							const aspectRatio = getImageAspectRatio(image)
-							return aspectRatio > 1.2 // Landscape images
-						})
-						
-						if (landscapeImages.length > 0) {
-							// Use the screen width to calculate expected height of landscape images
-							const mobileScreenWidth = window.innerWidth * 0.9 // Account for padding
-							const landscapeHeights = landscapeImages.map((image: any) => {
-								const aspectRatio = getImageAspectRatio(image)
-								return mobileScreenWidth / aspectRatio
-							})
-							
-							// Use the smallest height among landscape images
-							const normalizedHeight = Math.min(...landscapeHeights)
-							groupHeights[groupKey] = normalizedHeight
-						}
-						
-						// Show the group
-						normalizedGroups[groupKey] = true
-					})
-				})
-			}, 200) // Shorter delay for mobile
-		}
-
-		return () => window.removeEventListener('resize', updateButtonPosition)
-	})
-
-	// Print-only list of works (records come from the page load, keyed by lowercased ref)
-	const credits = $derived($page.data.libraryCredits ?? {})
-
-	const creditRoles = [
-		'coverDesign',
-		'coverIllustration',
-		'coverCalligraphy',
-		'pageDesign',
-		'pageIllustration',
-		'pageCalligraphy'
-	] as const
-
-	// Each book once, in order of appearance
-	function getCabinetRefs(cabinet: any): string[] {
-		const refs: string[] =
-			cabinet?.groups?.flatMap(
-				(group: any) => group?.images?.nodes?.map((image: any) => image?.reference) ?? []
-			) ?? []
-		return [...new Set(refs.filter(Boolean).map((ref) => ref.toLowerCase()))].filter(
-			(ref) => credits[ref]
-		)
-	}
-
-	// "Cover design, cover illustration: Kamal Boullata; Page calligraphy: Elias Nicolas"
-	function formatRoles(work: Record<string, any>, lang: 'en' | 'ar'): string {
-		const byPerson = new Map<string, string[]>()
-		for (const role of creditRoles) {
-			const person = work[role]?.trim()
-			if (!person) continue
-			const label = $labelTranslations[role][lang]
-			byPerson.set(person, [...(byPerson.get(person) ?? []), label])
-		}
-		return [...byPerson]
-			.map(([person, roles]) => {
-				const label = roles
-					.map((role, i) => (i && lang === 'en' ? role.toLowerCase() : role))
-					.join(lang === 'ar' ? '، ' : ', ')
-				return `${label}: ${person}`
-			})
-			.join(lang === 'ar' ? '؛ ' : '; ')
-	}
-
-	function formatPublication(work: Record<string, any>, lang: 'en' | 'ar'): string {
-		return [work.publisher, work.place, work.year].filter(Boolean).join(lang === 'ar' ? '، ' : ', ')
-	}
-
-	const handleImageClick = (reference: string) => {
-		if (!reference) return
-		$activeBook = reference
-		console.log('Set active book reference:', reference)
-	}
-
-	// Action to setup image load detection
-	function setupImageLoad(node: HTMLElement, imageKey: string) {
-		const img = node.querySelector('img');
-		if (img && !img.hasAttribute('data-onload-set')) {
-			img.setAttribute('data-onload-set', 'true');
-			img.onload = () => imageLoadStates[imageKey] = true;
-			if (img.complete) imageLoadStates[imageKey] = true;
-		}
-		
 		return {
 			destroy() {
-				// Cleanup if needed
+				node.removeEventListener('load', onSettled, true)
+				node.removeEventListener('error', onSettled, true)
 			}
 		}
 	}
 
-	// Helper function to get aspect ratio from image - now uses pre-calculated server value
-	function getImageAspectRatio(image: any): number {
-		// Return pre-calculated aspect ratio from server, with fallback to 1
-		return image?.aspectRatio ?? 1;
-	}
-	
-	// Replaced getImageOrientation function to use cached aspect ratio
-	function getImageOrientation(image: any): 'portrait' | 'landscape' | 'square' {
-		const aspectRatio = getImageAspectRatio(image);
-		
-		if (aspectRatio > 1.1) return 'landscape';
-		if (aspectRatio < 0.9) return 'portrait';
-		return 'square'; // For images that are approximately square
-	}
-	
-	// Also update the getImageHeightClass function to use the cached aspect ratio
-	function getImageHeightClass(image: any, groupLayout: string): string {
-		const aspectRatio = getImageAspectRatio(image);
+	/** Keeps an image transparent until it has arrived, so that it fades in. */
+	function fadeInWhenLoaded(img: HTMLImageElement) {
+		if (img.complete) return
 
-		if (groupLayout === 'organic-landscape') {
-			// If aspect ratio is less than 1.7:1, use smaller height
-			return aspectRatio < 1.7 ? 'h-[300px] lg:h-[430px]' : 'h-auto lg:h-[250px]';
-		} else {
-			// In normal organic layout, use the original heights
-			return 'h-[300px] lg:h-[430px]';
-		}
+		img.style.opacity = '0'
+		const show = () => (img.style.opacity = '')
+		img.addEventListener('load', show, { once: true })
+		img.addEventListener('error', show, { once: true })
 	}
 
-	// Precalculate group height helper
-	function precalculateGroupHeight(group: any, containerWidth: number = 400): number {
-		if (!group?.images?.nodes?.length) return 300
-		
-		const heights = group.images.nodes.map((image: any) => {
-			const aspectRatio = getImageAspectRatio(image)
-			return containerWidth / aspectRatio
-		})
-		
-		return Math.min(...heights)
+	interface Placement {
+		column: 'both' | 'left' | 'right'
+		row: number
 	}
-	
-	// Initialize animation on mount instead of using reactive effect
-	onMount(() => {
-		// For each animation section that needs to be started
-		const groups = block?.exhibitionRoom?.cabinets?.flatMap(c => 
-			c?.groups?.filter(g => g?.layout?.[0] === 'animation') ?? []
-		) ?? [];
-		
-		if (groups.length > 0 && groups[0]?.images?.nodes?.length) {
-			startAnimation(groups[0].images.nodes);
-		}
-	});
-	
-	// Cleanup when component unmounts
-	onDestroy(() => {
-		if (animationInterval) {
-			clearInterval(animationInterval);
-		}
-	});
 
-	// Image height normalization for organic-landscape layout
-	let normalizedGroups = $state<Record<string, boolean>>({});
-	let groupHeights = $state<Record<string, number>>({});
-	
-	function getGroupId(cabinetIndex: number, groupIndex: number): string {
-		return `cabinet${cabinetIndex}_group${groupIndex}`;
+	/**
+	 * Where an image sits in an organic group on wide screens. The first image
+	 * is centred, the following ones alternate left and right of the centre
+	 * line (mirrored on Arabic pages), each starting half an image lower than
+	 * the one before. From four images up, the last one is centred again.
+	 */
+	function organicPlacement(index: number, count: number): Placement {
+		const isStaggered = count > 2
+		const isClosing = count > 3 && index === count - 1
+
+		if (!isStaggered || index === 0) return { column: 'both', row: index + 1 }
+		// Staggered images span two rows, so the closing image starts two rows down
+		if (isClosing) return { column: 'both', row: index + 2 }
+		return { column: index % 2 ? 'left' : 'right', row: index + 1 }
 	}
 </script>
 
-{#snippet refCode(reference: string | null | undefined)}
-	{#if reference}
-		<span class="print-ref hidden print:block">{reference}</span>
-	{/if}
+{#snippet tile(image: RoomImage, shadow: boolean, placement?: Placement)}
+	<button
+		type="button"
+		class="tile {placement?.column ?? ''}"
+		style:--aspect-ratio={image.aspectRatio}
+		style:--row={placement?.row}
+		disabled={!image.reference}
+		onclick={() => ($activeBook = image.reference)}
+	>
+		<img
+			class="h-full w-full transition-opacity duration-300"
+			class:drop-shadow-lg={shadow}
+			use:fadeInWhenLoaded
+			src={image.src}
+			srcset={image.srcset}
+			width={image.width}
+			height={image.height}
+			alt={image.alt}
+			loading="lazy"
+		/>
+		{#if image.reference}
+			<span class="print-ref hidden print:block">{image.reference}</span>
+		{/if}
+	</button>
 {/snippet}
 
-<!-- Loading progress bar -->
-{#if !initialBatchLoaded}
-	<div class="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50 print:hidden">
-		<div 
+{#if loadingProgress < 1}
+	<div class="fixed top-0 left-0 w-full h-1 z-50 print:hidden">
+		<div
 			class="h-full bg-black transition-all duration-300"
-			style="width: {(Object.values(imageLoadStates).filter(Boolean).length / Math.max(Math.min(block?.exhibitionRoom?.cabinets?.[0]?.groups?.[0]?.images?.nodes?.length || 8, 8), 1)) * 100}%"
+			style:width="{loadingProgress * 100}%"
 		></div>
 	</div>
 {/if}
 
-<div class="w-full flex flex-row">
-	<div class="images">
-		<header
-			class="mb-[200px] mt-[200px] print:my-0"
-			use:inview={{
-				rootMargin: '0px 0px -80% 0px', // Triggers when header is near top
-				unobserveOnEnter: false
-			}}
-			oninview_change={handleHeaderInView}
+<div class="images w-full" use:countSettledImages>
+	<header
+		class="my-[200px] print:my-0"
+		use:inview={{ rootMargin: '0px 0px -80% 0px' }}
+		oninview_enter={() => (activeCabinet = null)}
+	>
+		<RoomTitle nameAr={room.nameAr} nameEn={room.nameEn} fontSize="4xl" />
+		{#if room.introText}
+			<div class="hidden print:block basestyles introtext" class:ar={isArabic}>
+				{@html room.introText}
+			</div>
+		{/if}
+	</header>
+
+	{#each room.cabinets as cabinet}
+		<div
+			class="mb-8"
+			id={cabinetImagesId(cabinet.slug)}
+			use:inview={{ rootMargin: '-20% 0px -60% 0px' }}
+			oninview_enter={() => (activeCabinet = cabinet.slug)}
 		>
-			{#if block?.exhibitionRoom?.nameAr}
-				<CoreHeading
-					block={{
-						attributes: {
-							content: block.exhibitionRoom.nameAr,
-							level: 1,
-							fontSize: '4xl',
-							textColor: null,
-							textAlign: 'center',
-							fontFamily: 'manchette',
-							className: '!mb-0'
-						}
-					}}
-				/>
-			{/if}
-			{#if block?.exhibitionRoom?.nameEn && $language != 'ar'}
-				<CoreHeading
-					block={{
-						attributes: {
-							content: block.exhibitionRoom.nameEn,
-							level: 1,
-							fontSize: '4xl',
-							textColor: null,
-							textAlign: 'center',
-							fontFamily: null
-						}
-					}}
-				/>
-			{/if}
-			{#if block?.exhibitionRoom?.introText}
-				<div class="hidden print:block basestyles introtext {$language === 'ar' ? 'ar' : ''}">
-					{@html block.exhibitionRoom.introText}
+			<header class="mb-12">
+				<RoomTitle nameAr={cabinet.nameAr} nameEn={cabinet.nameEn} englishFont="boogy" />
+			</header>
+
+			{#if cabinet.introText}
+				<div class="hidden print:block basestyles" class:ar={isArabic}>
+					{@html cabinet.introText}
 				</div>
 			{/if}
-		</header>
 
-		{#if block?.exhibitionRoom?.cabinets}
-			{#each block.exhibitionRoom.cabinets as cabinet, cabinetIndex}
-				{#if cabinet}
+			{#each cabinet.groups as group}
+				{#if group.layout === 'animation'}
+					<AnimationGroup {group} />
+				{:else}
 					<div
-						class="mb-8"
-						id="images-cabinet-{cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')}"
-						use:inview={{
-							rootMargin: '-20% 0px -60% 0px', // Adjust these values to control when the scroll triggers
-							unobserveOnEnter: false // Keep observing to handle scrolling back up
-						}}
-						oninview_change={handleCabinetInView(
-							`cabinet-${cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')}`
-						)}
+						class="image-group layout-{group.layout}"
+						class:two-column={group.layout === 'organic' && group.images.length > 2}
+						style:--widest-aspect-ratio={group.widestAspectRatio}
 					>
-						<header class="mb-12 top-[20vh] z-30">
-							{#if cabinet.nameAr}
-								<CoreHeading
-									block={{
-										attributes: {
-											content: cabinet.nameAr,
-											level: 1,
-											fontSize: null,
-											textColor: null,
-											textAlign: 'center',
-											fontFamily: 'manchette',
-											className: '!mb-0'
-										}
-									}}
-								/>
-							{/if}
-							{#if cabinet.nameEn && $language != 'ar'}
-								<CoreHeading
-									block={{
-										attributes: {
-											content: cabinet.nameEn,
-											level: 1,
-											fontSize: null,
-											textColor: null,
-											textAlign: 'center',
-											fontFamily: 'boogy'
-										}
-									}}
-								/>
-							{/if}
-						</header>
-
-						{#if cabinet.introText}
-							<div class="basestyles {$language === 'ar' ? 'ar' : ''} hidden print:block">
-								{@html cabinet.introText}
-							</div>
-						{/if}
-
-						{#if cabinet.groups}
-							{#each cabinet.groups as group, groupIndex}
-								{#if group?.layout}
-									{#if group.layout[0] === 'miniatures'}
-										<div
-											class="flex flex-row flex-wrap gap-2 mb-[200px] justify-center layout-miniatures"
-											use:inview={cabinetIndex === 0 && groupIndex === 0 ? undefined : options}
-											oninview_change={cabinetIndex === 0 && groupIndex === 0
-												? undefined
-												: handleChange}
-										>
-											{#if group.images?.nodes}
-												{#each group.images.nodes as image, i}
-													{@const imageKey = getImageKey(cabinetIndex, groupIndex, i)}
-													<div
-														class="relative w-[180px] hover:scale-105 transition-all duration-500 {cabinetIndex ===
-															0 && groupIndex === 0
-															? 'scale-100 opacity-100 translate-y-0'
-															: isInView
-																? 'scale-100 opacity-100 translate-y-0'
-																: 'scale-100 opacity-100 translate-y-0'}"
-														onclick={() => handleImageClick(image.reference)}
-														onkeydown={(e) =>
-															e.key === 'Enter' && handleImageClick(image.reference)}
-														role="button"
-														tabindex="0"
-														class:cursor-pointer={image.reference}
-													>
-														{#if !imageLoadStates[imageKey]}
-															<ImageSkeleton 
-																aspectRatio={getImageAspectRatio(image)}
-																className="w-[180px] h-[180px]"
-															/>
-														{/if}
-														<div 
-															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'}" 
-															class:absolute={!imageLoadStates[imageKey]} 
-															class:inset-0={!imageLoadStates[imageKey]}
-															use:setupImageLoad={imageKey}
-														>
-															<Image
-																imageObject={image}
-																imageSize="thumbnail"
-																shadow={group.shadow}
-																fit="contain"
-															/>
-														</div>
-														{@render refCode(image.reference)}
-													</div>
-												{/each}
-											{/if}
-										</div>
-									{/if}
-
-									{#if group.layout[0] === 'centered'}
-										<div
-											class="flex flex-col gap-[200px] mb-[100px] lg:mb-[200px] items-center layout-centered max-w-[100vw] "
-											use:inview={options}
-											oninview_change={handleChange}
-										>
-											{#if group.images?.nodes}
-												{#each group.images.nodes as image, i}
-													{@const imageKey = getImageKey(cabinetIndex, groupIndex, i)}
-													<div
-														class="{getImageHeightClass(
-															image,
-															group.layout[0]
-														)} hover:scale-[101%] transition-all duration-200 {isInView
-															? 'scale-100 opacity-100 translate-y-0'
-															: 'scale-100 opacity-100 translate-y-0'}"
-														onclick={() => handleImageClick(image.reference)}
-														onkeydown={(e) =>
-															e.key === 'Enter' && handleImageClick(image.reference)}
-														role="button"
-														tabindex="0"
-														class:cursor-pointer={image.reference}
-													>
-														{#if !imageLoadStates[imageKey]}
-															<ImageSkeleton 
-																aspectRatio={getImageAspectRatio(image)}
-																className="w-full h-full"
-															/>
-														{/if}
-														<div 
-															class="transition-opacity duration-300 {imageLoadStates[imageKey] ? 'opacity-100' : 'opacity-0'} w-full h-full" 
-															class:absolute={!imageLoadStates[imageKey]} 
-															class:inset-0={!imageLoadStates[imageKey]}
-															use:setupImageLoad={imageKey}
-														>
-															<Image
-																imageObject={image}
-																imageSize="large"
-																fit="contain"
-																shadow={group.shadow}
-																extraClasses="!w-auto !h-full"
-															/>
-														</div>
-														{@render refCode(image.reference)}
-													</div>
-												{/each}
-											{/if}
-										</div>
-									{/if}
-
-									{#if group.layout[0] === 'animation'}
-										<div class="flex flex-col mt-[200px] mb-[200px] items-center layout-centered layout-animation">
-											{#if group.images?.nodes?.length > 0}
-												<!-- Preload all animation images hidden -->
-												{#each group.images.nodes as animImage, animIndex}
-													{@const animImageKey = getImageKey(cabinetIndex, groupIndex, animIndex)}
-													<div class="hidden print:block animation-frame" use:setupImageLoad={animImageKey}>
-														<Image
-															imageObject={animImage}
-															imageSize="large"
-															fit="contain"
-															lazy={false}
-														/>
-													</div>
-												{/each}
-												{@render refCode(
-													[...new Set(group.images.nodes.map((node) => node?.reference).filter(Boolean))].join(', ')
-												)}
-												
-												<div class="relative h-[300px] lg:h-[430px] w-full lg:max-w-[800px] print:hidden">
-													{#key previousImageIndex}
-														<div class="absolute inset-0 flex justify-center w-full h-full z-10">
-															<div class="relative h-full flex justify-center w-full">
-																<Image
-																	imageObject={group.images.nodes[previousImageIndex]}
-																	imageSize="large"
-																	fit="contain"
-																	lazy={false}
-																	extraClasses="!w-auto !h-full"
-																/>
-															</div>
-														</div>
-													{/key}
-													{#key currentImageIndex}
-														<div
-															class="absolute inset-0 flex justify-center w-full h-full z-20"
-															transition:fade={{ duration: 200 }}
-															onclick={() =>
-																handleImageClick(group.images.nodes[currentImageIndex]?.reference)}
-															onkeydown={(e) =>
-																e.key === 'Enter' &&
-																handleImageClick(group.images.nodes[currentImageIndex]?.reference)}
-															role="button"
-															tabindex="0"
-															class:cursor-pointer={group.images.nodes[currentImageIndex]
-																?.reference}
-														>
-															<div class="relative h-full flex justify-center w-full">
-																<Image
-																	imageObject={group.images.nodes[currentImageIndex]}
-																	imageSize="large"
-																	fit="contain"
-																	lazy={false}
-																	extraClasses="!w-auto !h-full"
-																/>
-															</div>
-														</div>
-													{/key}
-												</div>
-											{/if}
-										</div>
-									{/if}
-
-									{#if group.layout[0] === 'organic' || group.layout[0] === 'organic-landscape'}
-										<div 
-											class="lg:grid lg:grid-cols-2 gap-4 mb-[200px] max-w-[100vw] layout-{group.layout[0]} group-{getGroupId(cabinetIndex, groupIndex)} transition-opacity duration-500" 
-											class:invisible={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
-											class:opacity-0={group.layout[0] === 'organic-landscape' && !normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
-											class:opacity-100={group.layout[0] !== 'organic-landscape' || normalizedGroups[getGroupId(cabinetIndex, groupIndex)]}
-										>
-											{#if group.images?.nodes?.length > 0}
-												<!-- First image -->
-												{@const firstImageKey = getImageKey(cabinetIndex, groupIndex, 0)}
-												<div class="lg:col-span-2 flex justify-center">
-													<div
-														class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
-															group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																? ''
-																: getImageHeightClass(group.images.nodes[0], group.layout[0])
-														}`}
-														style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-															? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-															: ''}
-														onclick={() => handleImageClick(group.images.nodes[0]?.reference)}
-														onkeydown={(e) =>
-															e.key === 'Enter' &&
-															handleImageClick(group.images.nodes[0]?.reference)}
-														role="button"
-														tabindex="0"
-														class:cursor-pointer={group.images.nodes[0]?.reference}
-													>
-														{#if !imageLoadStates[firstImageKey]}
-															<ImageSkeleton 
-																aspectRatio={getImageAspectRatio(group.images.nodes[0])}
-																className="w-full h-full"
-															/>
-														{/if}
-														<img 
-															src={group.images.nodes[0]?.sourceUrl}
-															alt={group.images.nodes[0]?.altText || ''}
-															style="height: 100%; width: auto; object-fit: contain;"
-															class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[firstImageKey] ? 'opacity-100' : 'opacity-0'}"
-															onload={() => imageLoadStates[firstImageKey] = true}
-															loading="lazy"
-														/>
-														{@render refCode(group.images.nodes[0]?.reference)}
-													</div>
-												</div>
-
-												<!-- For 2 images, show the second image centered -->
-												{#if group.images.nodes.length === 2}
-													{@const secondImageKey = getImageKey(cabinetIndex, groupIndex, 1)}
-													<div class="lg:col-span-2 flex justify-center">
-														<div
-															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
-																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																	? ''
-																	: getImageHeightClass(group.images.nodes[1], group.layout[0])
-															}`}
-															style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																: ''}
-															onclick={() => handleImageClick(group.images.nodes[1]?.reference)}
-															onkeydown={(e) =>
-																e.key === 'Enter' &&
-																handleImageClick(group.images.nodes[1]?.reference)}
-															role="button"
-															tabindex="0"
-															class:cursor-pointer={group.images.nodes[1]?.reference}
-														>
-															{#if !imageLoadStates[secondImageKey]}
-																<ImageSkeleton 
-																	aspectRatio={getImageAspectRatio(group.images.nodes[1])}
-																	className="w-full h-full"
-																/>
-															{/if}
-															<img 
-																src={group.images.nodes[1]?.sourceUrl}
-																alt={group.images.nodes[1]?.altText || ''}
-																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[secondImageKey] ? 'opacity-100' : 'opacity-0'}"
-																onload={() => imageLoadStates[secondImageKey] = true}
-																loading="lazy"
-															/>
-															{@render refCode(group.images.nodes[1]?.reference)}
-														</div>
-													</div>
-													<!-- For 3 images, show remaining images in alternating layout -->
-												{:else if group.images.nodes.length === 3}
-													{#each group.images.nodes.slice(1) as image, i}
-														{@const imgKey = getImageKey(cabinetIndex, groupIndex, i + 1)}
-														{#if i % 2 === 0}
-															<div class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end">
-																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-end ${
-																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																			? ''
-																			: getImageHeightClass(image as any, group.layout[0])
-																	}`}
-																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																		: ''}
-																	onclick={() => handleImageClick((image as any)?.reference)}
-																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
-																	role="button"
-																	tabindex="0"
-																	class:cursor-pointer={(image as any)?.reference}
-																>
-																	{#if !imageLoadStates[imgKey]}
-																		<ImageSkeleton 
-																			aspectRatio={getImageAspectRatio(image)}
-																			className="w-full h-full"
-																		/>
-																	{/if}
-																	<img 
-																		src={(image as any)?.sourceUrl}
-																		alt={(image as any)?.altText || ''}
-																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
-																		onload={() => imageLoadStates[imgKey] = true}
-																		loading="lazy"
-																	/>
-																	{@render refCode((image as any)?.reference)}
-																</div>
-															</div>
-															<div class="hidden lg:block col-start-2 row-span-1">
-																<div class="h-[200px]"></div>
-															</div>
-														{:else}
-															<div
-																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
-															>
-																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-start ${
-																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																			? ''
-																			: getImageHeightClass(image as any, group.layout[0])
-																	}`}
-																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																		: ''}
-																	onclick={() => handleImageClick((image as any)?.reference)}
-																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
-																	role="button"
-																	tabindex="0"
-																	class:cursor-pointer={(image as any)?.reference}
-																>
-																	{#if !imageLoadStates[imgKey]}
-																		<ImageSkeleton 
-																			aspectRatio={getImageAspectRatio(image)}
-																			className="w-full h-full"
-																		/>
-																	{/if}
-																	<img 
-																		src={(image as any)?.sourceUrl}
-																		alt={(image as any)?.altText || ''}
-																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
-																		onload={() => imageLoadStates[imgKey] = true}
-																		loading="lazy"
-																	/>
-																	{@render refCode((image as any)?.reference)}
-																</div>
-															</div>
-														{/if}
-													{/each}
-													<!-- For 4+ images -->
-												{:else}
-													{#each group.images.nodes.slice(1, -1) as image, i}
-														{@const imgKey = getImageKey(cabinetIndex, groupIndex, i + 1)}
-														{#if i % 2 === 0}
-															<!-- Even indexed images (2nd, 4th, etc.) -->
-															<div
-																class="lg:col-start-1 lg:row-span-2 flex justify-center lg:justify-end"
-															>
-																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-end ${
-																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																			? ''
-																			: getImageHeightClass(image as any, group.layout[0])
-																	}`}
-																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																		: ''}
-																	onclick={() => handleImageClick((image as any)?.reference)}
-																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
-																	role="button"
-																	tabindex="0"
-																	class:cursor-pointer={(image as any)?.reference}
-																>
-																	{#if !imageLoadStates[imgKey]}
-																		<ImageSkeleton 
-																			aspectRatio={getImageAspectRatio(image)}
-																			className="w-full h-full"
-																		/>
-																	{/if}
-																	<img 
-																		src={(image as any)?.sourceUrl}
-																		alt={(image as any)?.altText || ''}
-																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
-																		onload={() => imageLoadStates[imgKey] = true}
-																		loading="lazy"
-																	/>
-																	{@render refCode((image as any)?.reference)}
-																</div>
-															</div>
-															<!-- Spacer -->
-															<div class="col-start-2 row-span-1">
-																<div class="lg:h-[140px]"></div>
-															</div>
-														{:else}
-															<!-- Odd indexed images (3rd, 5th, etc.) -->
-															<div
-																class="col-start-2 lg:row-span-2 flex justify-center lg:justify-start"
-															>
-																<div
-																	class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center lg:justify-start ${
-																		group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																			? ''
-																			: getImageHeightClass(image as any, group.layout[0])
-																	}`}
-																	style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																		? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																		: ''}
-																	onclick={() => handleImageClick((image as any)?.reference)}
-																	onkeydown={(e) =>
-																		e.key === 'Enter' && handleImageClick((image as any)?.reference)}
-																	role="button"
-																	tabindex="0"
-																	class:cursor-pointer={(image as any)?.reference}
-																>
-																	{#if !imageLoadStates[imgKey]}
-																		<ImageSkeleton 
-																			aspectRatio={getImageAspectRatio(image)}
-																			className="w-full h-full"
-																		/>
-																	{/if}
-																	<img 
-																		src={(image as any)?.sourceUrl}
-																		alt={(image as any)?.altText || ''}
-																		style="height: 100%; width: auto; object-fit: contain;"
-																		class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[imgKey] ? 'opacity-100' : 'opacity-0'}"
-																		onload={() => imageLoadStates[imgKey] = true}
-																		loading="lazy"
-																	/>
-																	{@render refCode((image as any)?.reference)}
-																</div>
-															</div>
-															<!-- Spacer -->
-															<div class="lg:col-start-1 row-span-1">
-																<div
-																	class="{group.layout[0] === 'organic-landscape'
-																		? 'lg:h-[100px]'
-																		: 'lg:h-[140px]'} "
-																></div>
-															</div>
-														{/if}
-													{/each}
-
-													<!-- Final centered image (only if more than 3 images) -->
-													{@const lastImageKey = getImageKey(cabinetIndex, groupIndex, group.images.nodes.length - 1)}
-													<div class="lg:col-span-2 flex justify-center">
-														<div
-															class={`w-full hover:scale-[101%] transition-all duration-200 img-container flex justify-center ${
-																group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																	? ''
-																	: getImageHeightClass(group.images.nodes[group.images.nodes.length - 1], group.layout[0])
-															}`}
-															style={group.layout[0] === 'organic-landscape' && normalizedGroups[getGroupId(cabinetIndex, groupIndex)]
-																? `height: ${groupHeights[getGroupId(cabinetIndex, groupIndex)]}px`
-																: ''}
-															onclick={() =>
-																handleImageClick(
-																	group.images.nodes[group.images.nodes.length - 1]?.reference
-																)}
-															onkeydown={(e) =>
-																e.key === 'Enter' &&
-																handleImageClick(
-																	group.images.nodes[group.images.nodes.length - 1]?.reference
-																)}
-															role="button"
-															tabindex="0"
-															class:cursor-pointer={group.images.nodes[
-																group.images.nodes.length - 1
-															]?.reference}
-														>
-															{#if !imageLoadStates[lastImageKey]}
-																<ImageSkeleton 
-																	aspectRatio={getImageAspectRatio(group.images.nodes[group.images.nodes.length - 1])}
-																	className="w-full h-full"
-																/>
-															{/if}
-															<img 
-																src={group.images.nodes[group.images.nodes.length - 1]?.sourceUrl}
-																alt={group.images.nodes[group.images.nodes.length - 1]?.altText || ''}
-																style="height: 100%; width: auto; object-fit: contain;"
-																class="img-content drop-shadow-lg transition-opacity duration-300 {imageLoadStates[lastImageKey] ? 'opacity-100' : 'opacity-0'}"
-																onload={() => imageLoadStates[lastImageKey] = true}
-																loading="lazy"
-															/>
-															{@render refCode(group.images.nodes[group.images.nodes.length - 1]?.reference)}
-														</div>
-													</div>
-												{/if}
-											{/if}
-										</div>
-									{/if}
-								{/if}
-							{/each}
-						{/if}
+						{#each group.images as image, i}
+							{@render tile(
+								image,
+								group.shadow,
+								group.layout === 'organic' ? organicPlacement(i, group.images.length) : undefined
+							)}
+						{/each}
 					</div>
 				{/if}
 			{/each}
-		{/if}
-
-		{#if block?.exhibitionRoom?.cabinets && Object.keys(credits).length}
-			<section class="print-credits hidden print:block {$language === 'ar' ? 'font-lyon' : 'font-martina'}">
-				<h2 class={$language === 'ar' ? 'font-manchette' : 'font-boogy'}>
-					{$labelTranslations.listOfWorks[$language]}
-				</h2>
-				{#each block.exhibitionRoom.cabinets as cabinet}
-					{@const refs = getCabinetRefs(cabinet)}
-					{#if refs.length}
-						<h3>{$language === 'ar' ? cabinet.nameAr : cabinet.nameEn}</h3>
-						<ul>
-							{#each refs as ref}
-								{@const work = credits[ref]}
-								{@const publication = formatPublication(work, $language)}
-								{@const roles = formatRoles(work, $language)}
-								<li>
-									<span class="print-credits-ref">{work.ref}</span>
-									<div>
-										<p>
-											<em>{work.title?.trim()}</em>{#if work.author}. {work.author}{/if}{#if publication}. {publication}{/if}
-										</p>
-										{#if roles}<p>{roles}</p>{/if}
-										{#if work.collection}
-											<p>{$labelTranslations.collection[$language]}: {work.collection}</p>
-										{/if}
-									</div>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				{/each}
-			</section>
-		{/if}
-	</div>
-	{#if $isInfoOpen}
-		<div
-			transition:fly={{ x: 500, duration: 800 }}
-			class="fixed right-0 top-0 max-w-[500px] z-30 print:hidden {$language === 'ar' ? 'dir-rtl' : ''} "
-		>
-			<button
-				class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 z-30"
-				style="left: 0"
-				onclick={toggleInfo}
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 14 14"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-					class="transition-transform duration-300 {$isInfoOpen ? '' : 'rotate-45'}"
-				>
-					<path d="M1 1L13 13M1 13L13 1" stroke="black" stroke-width="1" />
-				</svg>
-			</button>
-
-			<div class="text bg-white-off right-0 top-0 pt-[100px] px-12 overflow-y-scroll h-screen z-30">
-				<div class="pt-16" id="room-intro">
-					<a href="#" onclick={preventDefault((e) => handleCabinetLinkClick(e, '#'))}>
-						{#if block.exhibitionRoom.nameAr}
-							<CoreHeading
-								block={{
-									attributes: {
-										content: block.exhibitionRoom.nameAr,
-										level: 1,
-										fontSize: null,
-										textColor: null,
-										textAlign: 'center',
-										fontFamily: 'manchette',
-										className: $language === 'ar' ? 'mb-4' : '!mb-0'
-									}
-								}}
-							/>
-						{/if}
-						{#if block.exhibitionRoom.nameEn && $language != 'ar'}
-							<CoreHeading
-								block={{
-									attributes: {
-										content: block.exhibitionRoom.nameEn,
-										level: 1,
-										fontSize: null,
-										textColor: null,
-										textAlign: 'center',
-										fontFamily: null
-									}
-								}}
-							/>
-						{/if}
-					</a>
-					{#if block.exhibitionRoom.introText}
-						<div class="basestyles introtext {$language === 'ar' ? 'ar' : ''}">
-							{@html block.exhibitionRoom.introText}
-						</div>
-					{/if}
-				</div>
-				{#each block.exhibitionRoom.cabinets as cabinet, i}
-					<div
-						class="mt-8 pt-24 pb-24 {i === block.exhibitionRoom.cabinets.length - 1
-							? 'min-h-screen'
-							: ''}"
-						id="text-cabinet-{cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')}"
-					>
-						<header>
-							<a
-								href="#images-cabinet-{cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_')}"
-								onclick={preventDefault((e) =>
-									handleCabinetLinkClick(e, cabinet.nameEn?.toLowerCase().replace(/\s+/g, '_'))
-								)}
-							>
-								{#if cabinet.nameAr}
-									<CoreHeading
-										block={{
-											attributes: {
-												content: cabinet.nameAr,
-												level: 1,
-												fontSize: 'xl',
-												textColor: null,
-												textAlign: 'center',
-												fontFamily: 'manchette',
-												className: $language === 'ar' ? 'mb-2' : '!mb-0'
-											}
-										}}
-									/>
-								{/if}
-								{#if cabinet.nameEn && $language != 'ar'}
-									<CoreHeading
-										block={{
-											attributes: {
-												content: cabinet.nameEn,
-												level: 1,
-												fontSize: 'xl',
-												textColor: null,
-												textAlign: 'center',
-												fontFamily: null
-											}
-										}}
-									/>
-								{/if}
-							</a>
-						</header>
-
-						{#if cabinet.introText}
-							<div class="basestyles {$language === 'ar' ? 'ar' : ''}">
-								{@html cabinet.introText}
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
 		</div>
-	{:else}
-		<div transition:fly={{ x: 500, duration: 500 }} class="print:hidden">
-			<button
-				class="fixed top-1/2 -translate-y-1/2 -translate-x-1/2 w-12 h-12 bg-white-pure rounded-full border border-black flex items-center justify-center hover:scale-105 transition-all duration-300 3-40"
-				style="right: 0px"
-				onclick={toggleInfo}
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 14 14"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-					class="transition-transform duration-300 rotate-45"
-				>
-					<path d="M1 1L13 13M1 13L13 1" stroke="black" stroke-width="1" />
-				</svg>
-			</button>
-		</div>
-	{/if}
+	{/each}
+
+	<WorksList cabinets={room.cabinets} />
 </div>
 
+<InfoPanel {room} {activeCabinet} />
+
 <style lang="postcss">
+	/* Images are sized from two custom properties set in the markup:
+	   --aspect-ratio on each tile and --widest-aspect-ratio on its group. */
+	.image-group {
+		--max-height: 300px;
+		margin-bottom: 200px;
+	}
+
+	.tile {
+		display: block;
+		aspect-ratio: var(--aspect-ratio);
+		transition: transform 200ms;
+	}
+
+	.tile:enabled:hover {
+		transform: scale(1.01);
+	}
+
+	/* Miniatures: fixed width, as many to a row as fit */
+	.layout-miniatures {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.layout-miniatures .tile {
+		width: 180px;
+		transition-duration: 500ms;
+	}
+
+	.layout-miniatures .tile:enabled:hover {
+		transform: scale(1.05);
+	}
+
+	/* Centered: each image as tall as allowed, unless that makes it wider than the page */
+	.layout-centered {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 200px;
+		margin-bottom: 100px;
+	}
+
+	.layout-centered .tile {
+		width: min(100%, var(--max-height) * var(--aspect-ratio));
+	}
+
+	/* Organic: all images of a group share one height, so a book's cover and
+	   its spreads stay in scale. That height is as tall as allowed, unless the
+	   widest image would then outgrow the space it has: the full width here,
+	   one of two columns on wide screens. */
+	.layout-organic {
+		container-type: inline-size;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+	}
+
+	.layout-organic .tile {
+		height: min(var(--max-height), 100cqw / var(--widest-aspect-ratio));
+	}
+
+	@media (min-width: theme('screens.lg')) {
+		.image-group {
+			--max-height: 430px;
+		}
+
+		.layout-centered {
+			margin-bottom: 200px;
+		}
+
+		.layout-organic {
+			--column-gap: 1rem;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 2rem var(--column-gap);
+		}
+
+		.layout-organic.two-column .tile {
+			height: min(var(--max-height), (50cqw - var(--column-gap) / 2) / var(--widest-aspect-ratio));
+		}
+
+		/* See organicPlacement() */
+		.layout-organic .tile {
+			grid-column: 1 / -1;
+			grid-row: var(--row);
+			justify-self: center;
+		}
+
+		.layout-organic .tile:is(.left, .right) {
+			grid-row: var(--row) / span 2;
+		}
+
+		/* Left and right images hug the centre line */
+		.layout-organic .tile.left {
+			grid-column: 1;
+			justify-self: end;
+		}
+
+		.layout-organic .tile.right {
+			grid-column: 2;
+			justify-self: start;
+		}
+	}
+
 	:global(.basestyles p) {
 		@apply text-sm md:text-base font-martina;
 	}
