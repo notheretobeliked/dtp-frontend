@@ -29,7 +29,11 @@ export const load: PageServerLoad = function load({ params }) {
 			title: `${book.title?.trim() ?? book.ref} – Decolonizing the Page`,
 			metaDesc: describe(book, lang),
 			opengraphUrl: `${PUBLIC_SITE_URL}${bookPath(lang, ref)}`,
-			opengraphImage: book.thumbnailCoverImage
+			opengraphImage: book.thumbnailCoverImage,
+			opengraphSiteName: 'Decolonizing the page',
+			imageAlt: book.title?.trim() ?? undefined,
+			// Covers are upright; the small square card crops them less than the wide one
+			card: 'summary' as const
 		},
 		// Lets the header's language switch stay on this book
 		translations: LIBRARY_LANGUAGES.filter((other) => other !== lang).map((other) => ({

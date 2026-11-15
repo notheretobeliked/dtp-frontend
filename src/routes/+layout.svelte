@@ -13,6 +13,7 @@
 	import { slide } from 'svelte/transition'
 	import { activeBook } from '$stores/activeBook'
 	import { bookDataPath } from '$lib/utilities/library'
+	import { languageAlternates } from '$lib/utilities/alternates'
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
 	import { onMount } from 'svelte'
@@ -31,6 +32,13 @@
 	const metadescription = $derived(seo.metaDesc)
 	const pageTitle = $derived(seo.title)
 	const siteTitle = $derived(seo.opengraphSiteName) // Assuming this is used for og:site_name
+	const imageAlt = $derived(seo.imageAlt || image?.altText || undefined)
+	const card = $derived(seo.card)
+	const pageUrl = $derived(`${siteUrl}${$page.url.pathname}`)
+	const ogLanguage = $derived($page.url.pathname.startsWith('/ar') ? 'ar_AR' : 'en_GB')
+	const alternates = $derived(
+		languageAlternates($page.url.pathname, $page.data.translations ?? [])
+	)
 	let loading = $state(false)
 	afterNavigate(() => {
 		document.documentElement.lang = $language
@@ -125,8 +133,18 @@
 </script>
 
 {#key $page.url.pathname}
-	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />
-	<Twitter {image} {metadescription} {pageTitle} {siteUrl} />
+	<OpenGraph
+		{image}
+		{imageAlt}
+		{metadescription}
+		{pageTitle}
+		{siteTitle}
+		{siteUrl}
+		{pageUrl}
+		{ogLanguage}
+		{alternates}
+	/>
+	<Twitter {image} {imageAlt} {metadescription} {pageTitle} {siteUrl} {pageUrl} {card} />
 {/key}
 
 {#key $page.url.pathname}
