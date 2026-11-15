@@ -2,35 +2,26 @@
 	import { run, stopPropagation } from 'svelte/legacy';
 
 	import { slide } from 'svelte/transition'
-	import { onMount } from 'svelte'
+	import { onMount, tick } from 'svelte'
 	import { labelTranslations } from '$stores/translations'
 	import { filterStore } from '$stores/filterStore'
 	let isFilterOpen = $state(false) // Add this new state
 	import { get } from 'svelte/store'
-	import { page } from '$app/stores'
+	import { navigating, page } from '$app/stores'
+	import { libraryPath, readLibraryFilters, type LibraryFilters } from '$lib/utilities/library'
 
 	const translations = get(labelTranslations)
 
 	import type { PageData } from './$types'
 	import type { Book } from '$lib/types/general'
 	import Label from '$components/molecules/label.svelte'
-	import { beforeNavigate } from '$app/navigation'
+	import { afterNavigate, replaceState } from '$app/navigation'
 	import { language } from '$stores/language'
 	interface Props {
 		data: PageData;
 	}
 
 	let { data }: Props = $props();
-	beforeNavigate(() => {
-		filterStore.set({
-			selectedArtist: '',
-			selectedAuthor: '',
-			selectedPublisher: '',
-			yearFrom: yearsAscending[0] || '',
-			yearTo: yearsDescending[0] || '',
-			searchFilter: ''
-		})
-	})
 	let filterHeight: number = $state()
 
 	let books: Book[] = $state((data.books ?? []).map((book) => ({
@@ -45,15 +36,6 @@
 	onMount(() => {
 		filterTop = filterContainer?.offsetTop || 0
 		filterHeight = filterContainer?.offsetHeight || 0
-
-		if (data.targetRef) {
-			setTimeout(() => {
-				const targetElement = document.querySelector(`[data-ref="${data.targetRef}"]`)
-				if (targetElement) {
-					targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-				}
-			}, 100)
-		}
 	})
 	// Use the yearRange from the server data
 	let yearRange = data.yearRange
@@ -95,14 +77,60 @@
 		}
 	});
 
-	// Initialize filterStore with default values
-	filterStore.set({
+	// The filters live in the address (/en/library?artist=kamal-boullata), so
+	// a filtered view can be linked to, shared, and returned to with the back
+	// button. With nothing in the address, these apply:
+	const defaultFilters: LibraryFilters = {
 		selectedArtist: '',
 		selectedAuthor: '',
 		selectedPublisher: '',
 		yearFrom: yearsAscending[0] || '',
 		yearTo: yearsDescending[0] || '',
 		searchFilter: ''
+	}
+
+	// Arriving from another page of the site, the address is known before the
+	// first render, so the list starts out filtered and the browser can put a
+	// returning reader back where they were in it. The prerendered page can't
+	// know the address; it shows the whole list until afterNavigate, below.
+	const arrivingAt = get(navigating)?.to?.url
+	filterStore.set(
+		arrivingAt ? readLibraryFilters(arrivingAt.searchParams, defaultFilters) : defaultFilters
+	)
+
+	// Set once the address has been read, so that it is never rewritten from
+	// filters that haven't caught up with it yet
+	let addressRead = false
+
+	// The book named after the # in the address, e.g. /en/library#a006
+	let highlightedRef = $state('')
+
+	afterNavigate(async ({ type }) => {
+		filterStore.set(readLibraryFilters(new URLSearchParams(location.search), defaultFilters))
+		addressRead = true
+
+		highlightedRef = decodeURIComponent(location.hash.slice(1)).toLowerCase()
+		// Going back restores the reader's own place in the list; any other
+		// arrival is taken to the book the address names.
+		if (highlightedRef && type !== 'popstate') {
+			await tick()
+			document.getElementById(highlightedRef)?.scrollIntoView({ block: 'center' })
+		}
+	})
+
+	// Keeps the address in step with the filters. It waits for a pause, as
+	// browsers limit how often a page may change its address and the search
+	// box changes the filters on every keystroke.
+	$effect(() => {
+		const address = libraryPath(lang, $filterStore, { defaults: defaultFilters })
+		if (!addressRead) return
+
+		const timer = setTimeout(() => {
+			if (address !== location.pathname + location.search) {
+				replaceState(address + location.hash, $page.state)
+			}
+		}, 300)
+		return () => clearTimeout(timer)
 	})
 
 	// Debugging function
@@ -572,7 +600,8 @@
 			<ul>
 				{#each filteredBooks as book (book.slug)}
 					<li
-						data-ref={book.ref?.toLowerCase()}
+						id={book.ref?.toLowerCase()}
+						class:highlighted={book.ref?.toLowerCase() === highlightedRef}
 						class="font-martina bg-black text-white-pure py-4 border-b border-white {lang === 'ar'
 							? 'text-right'
 							: ''}"
@@ -587,3 +616,16 @@
 		{/if}
 	</div>
 </main>
+
+<style>
+	/* The book the address points at lights up briefly on arrival */
+	.highlighted {
+		animation: highlight 2.5s ease-out;
+	}
+
+	@keyframes highlight {
+		from {
+			background-color: rgb(255 255 255 / 0.2);
+		}
+	}
+</style>

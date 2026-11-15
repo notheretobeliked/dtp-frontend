@@ -1,60 +1,23 @@
-export const prerender = false
 import { error } from '@sveltejs/kit'
+import { getBooks, getTaxonomies, isLibraryLanguage } from '$lib/server/library'
 import type { PageServerLoad } from './$types'
 
-function getYearRangeFromFlat(books: any[]) {
-  const years = books
-    .map(book => book.year)
-    .filter((year): year is number => 
-      typeof year === 'number' && !isNaN(year)  // Make sure we only get valid numbers
-    )
-  
-  if (years.length === 0) {
-    return { minYear: null, maxYear: null }
-  }
+export const prerender = true
 
-  return {
-    minYear: Math.min(...years),
-    maxYear: Math.max(...years)
-  }
-}
+export const load: PageServerLoad = function load({ params }) {
+	const lang = params.lang
+	if (!isLibraryLanguage(lang)) error(404, 'Sorry, this page does not exist')
 
-export const load: PageServerLoad = async function load({ params, fetch }) {
-  try {
-    const lang = params.lang || 'en'
+	const books = getBooks(lang)
+	const years = books.map((book) => book.year).filter((year) => typeof year === 'number')
 
-    // Fetch books and taxonomies in parallel
-    const [booksResponse, artistsResponse, authorsResponse, publishersResponse] = await Promise.all([
-      fetch(`/api/library-items?lang=${lang}`),
-      fetch(`/api/library-items?lang=${lang}&type=artists`),
-      fetch(`/api/library-items?lang=${lang}&type=authors`),
-      fetch(`/api/library-items?lang=${lang}&type=publishers`)
-    ])
-
-    if (!booksResponse.ok || !artistsResponse.ok || !authorsResponse.ok || !publishersResponse.ok) {
-      throw new Error('One or more API requests failed')
-    }
-
-    const [books, artists, authors, publishers] = await Promise.all([
-      booksResponse.json(),
-      artistsResponse.json(),
-      authorsResponse.json(),
-      publishersResponse.json()
-    ])
-
-    return {
-      books,
-      uri: params.uri,
-      artists,
-      authors,
-      publishers,
-      language: lang,
-      yearRange: getYearRangeFromFlat(books)
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      throw error(500, err.message)
-    }
-    throw error(500, 'An unknown error occurred')
-  }
+	return {
+		books,
+		...getTaxonomies(lang),
+		language: lang,
+		yearRange: {
+			minYear: years.length ? Math.min(...years) : null,
+			maxYear: years.length ? Math.max(...years) : null
+		}
+	}
 }

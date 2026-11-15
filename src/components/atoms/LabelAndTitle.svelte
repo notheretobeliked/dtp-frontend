@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores'
+	import type { CreditPart } from '$lib/utilities/library'
+	import { bookPath } from '$lib/utilities/library'
 	import { language } from '$stores/language'
 	interface Props {
 		underline?: boolean;
@@ -7,6 +9,8 @@
 		label: string;
 		title?: string | number | null;
 		ref?: string | null;
+		/** The title split into names, some linking to the library filtered by that name */
+		parts?: CreditPart[] | null;
 	}
 
 	let {
@@ -14,7 +18,8 @@
 		align = 'left',
 		label,
 		title = null,
-		ref = null
+		ref = null,
+		parts = null
 	}: Props = $props();
     
     let cleanTitle = $derived(title ? String(title).replace(/<[^>]*>/g, '') : null)
@@ -28,7 +33,7 @@
 			<div class="flex flex-row w-full justify-between">
 				<p class="text-{isArabic ? 'ar-xs font-manchette-ultralight' : 'xs font-martina tracking-widest'} uppercase mb-1">{label}</p>
 				<a
-					href="/{$page.data.lang}/library/{ref.toLowerCase()}"
+					href={bookPath($page.data.lang, ref)}
 					class="text-{isArabic ? 'ar-xs font-lyon' : 'xs font-martina tracking-widest'}  uppercase mb-1">#</a
 				>
 			</div>
@@ -37,6 +42,12 @@
 		{/if}
 	{/if}
 	{#if title}
-		<p class="text-{isArabic ? 'ar-sm font-lyon' : 'sm font-martina'} ">{cleanTitle}</p>
+		<p class="text-{isArabic ? 'ar-sm font-lyon' : 'sm font-martina'} ">
+			{#if parts}
+				{#each parts as part}{#if part.href}<a class="hover:underline" href={part.href}>{part.text}</a>{:else}{part.text}{/if}{/each}
+			{:else}
+				{cleanTitle}
+			{/if}
+		</p>
 	{/if}
 </div>

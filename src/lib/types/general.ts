@@ -1,8 +1,30 @@
 import type { ImageObject } from '$lib/types/wp-types.ts'
 
+/** An artist, author or publisher, as attached to a book */
+export interface NamedEntry {
+	name: string
+	slug: string
+}
+
+/** An artist, author or publisher, as listed in the library's filters */
+export interface TaxonomyEntry extends NamedEntry {
+	/** The name in the other language */
+	nameTranslated: string
+	description: string
+}
+
+export interface LibraryTaxonomies {
+	artists: TaxonomyEntry[]
+	authors: TaxonomyEntry[]
+	publishers: TaxonomyEntry[]
+}
+
 export interface Book {
 	slug: string
 	edition: string | null
+	artists?: NamedEntry[] | null
+	authors?: NamedEntry[] | null
+	publishers?: NamedEntry[] | null
 	artistFilterTerm: string | null
 	authorFilterTerm: string | null
 	publisherFilterTerm: string | null

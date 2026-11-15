@@ -12,6 +12,7 @@
 	import Label from '$components/molecules/label.svelte'
 	import { slide } from 'svelte/transition'
 	import { activeBook } from '$stores/activeBook'
+	import { bookDataPath } from '$lib/utilities/library'
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
 	import { onMount } from 'svelte'
@@ -22,12 +23,15 @@
 	}
 
 	let { data, children }: Props = $props()
-	let { seo, menu, uri, siteUrl } = data
+	let { menu, uri, siteUrl } = data
 	const menuItems = menu?.menuItems?.nodes
-	const image = seo.opengraphImage
-	const metadescription = seo.metaDesc
-	const pageTitle = seo.title
-	const siteTitle = seo.opengraphSiteName // Assuming this is used for og:site_name
+	// A page may supply its own `seo` (a library book does); it then takes the
+	// place of the layout's.
+	const seo = $derived($page.data.seo ?? data.seo)
+	const image = $derived(seo.opengraphImage)
+	const metadescription = $derived(seo.metaDesc)
+	const pageTitle = $derived(seo.title)
+	const siteTitle = $derived(seo.opengraphSiteName) // Assuming this is used for og:site_name
 	let loading = $state(false)
 	afterNavigate(() => {
 		document.documentElement.lang = $language
@@ -49,8 +53,9 @@
 		if ($activeBook) {
 			showModal = true
 			loading = true
-			fetch(`/api/library-items?ref=${$activeBook}&lang=${$language}`)
-				.then((res) => res.json())
+			// A static file per book; a reference with no library record has none
+			fetch(bookDataPath($language, $activeBook))
+				.then((res) => (res.ok ? res.json() : null))
 				.then((data) => {
 					currentBook = data || null
 					loading = false
