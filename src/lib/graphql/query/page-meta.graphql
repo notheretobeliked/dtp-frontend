@@ -1,13 +1,4 @@
 query PageMeta($uri: String!) {
-	menu(id: "main-menu", idType: SLUG) {
-		menuItems {
-			nodes {
-				label
-				order
-				uri
-			}
-		}
-	}
 	page:nodeByUri(uri: $uri) {
 		... on Page {
 			seo {

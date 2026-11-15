@@ -23,8 +23,7 @@
 	}
 
 	let { data, children }: Props = $props()
-	let { menu, uri, siteUrl } = data
-	const menuItems = menu?.menuItems?.nodes
+	let { siteUrl } = data
 	// A page may supply its own `seo` (a library book does); it then takes the
 	// place of the layout's.
 	const seo = $derived($page.data.seo ?? data.seo)
