@@ -22,7 +22,8 @@ p {
 	@apply text-lg;
 }
 
-p a {
+p a,
+figcaption a {
 	@apply border-dotted border-b-blue border-b hover:text-blue;
 }
 
