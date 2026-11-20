@@ -27,17 +27,8 @@ const config = {
 				'/ar', // Arabic version of the library page
 				'/ar/library', // Arabic version of the library page
 				'/en/library', // Arabic version of the library page
-				'/',
-				'/api/library-items'
-			], // Prerender all routes
-			handleHttpError: ({ path, referrer, message }) => {
-				// Create an array of paths to ignore
-				const ignorePaths = ['/', '/api/library-items']
-				if (ignorePaths.includes(path)) {
-					return
-				}
-				throw new Error(message)
-			}
+				'/'
+			] // Prerender all routes
 		}
 	}
 }

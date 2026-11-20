@@ -17,13 +17,21 @@
     metadescription: string;
     pageTitle: string;
     siteUrl: string;
+    /** The page's own full address */
+    pageUrl: string;
+    imageAlt?: string;
+    /** 'summary' shows a small square image beside the text; 'summary_large_image' a wide one above it */
+    card?: 'summary' | 'summary_large_image';
   }
 
   let {
     image,
     metadescription,
     pageTitle,
-    siteUrl
+    siteUrl,
+    pageUrl,
+    imageAlt = 'Decolonizing the page',
+    card = 'summary_large_image'
   }: Props = $props();
 
   // Helper function to select an image size, defaults to 'large' or the first available size
@@ -43,10 +51,10 @@
 </script>
 
 <svelte:head>
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content={card} />
   <meta name="twitter:title" content={pageTitle} />
   <meta name="twitter:description" content={metadescription} />
-  <meta name="twitter:url" content={siteUrl} />
+  <meta name="twitter:url" content={pageUrl} />
   <meta name="twitter:image" content={imageUrl || fallbackImageUrl} />
-  <meta name="twitter:image:alt" content={image?.altText || 'Decolonizing the page'} />
+  <meta name="twitter:image:alt" content={imageAlt} />
 </svelte:head>

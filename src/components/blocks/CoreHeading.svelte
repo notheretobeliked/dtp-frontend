@@ -11,7 +11,8 @@
 	type HeadingBlock = Omit<CoreHeading, 'attributes'> & { attributes?: HeadingAttributes | null }
 
 	interface Props {
-		block: HeadingBlock;
+		// Only the attributes are read, so code-built headings needn't fake a whole block
+		block: Pick<HeadingBlock, 'attributes'>;
 	}
 
 	let { block }: Props = $props();

@@ -415,7 +415,43 @@ async function fetchSitemapData(): Promise<ProcessedSitemapEntry[]> {
 	return processSitemapData(data)
 }
 
-function generateSitemapXML(sitemapEntries: ProcessedSitemapEntry[], baseUrl: string): string {
+/**
+ * A sitemap entry for each book's page in each language, the two languages
+ * linked to each other. Books carry no date of last change, so none is given.
+ */
+function generateBookSitemapEntries(
+	libraryData: Record<string, { ref?: string | null }[]>,
+	baseUrl: string
+): string[] {
+	const bookUrl = (lang: string, ref: string) => `${baseUrl}/${lang}/library/${ref.toLowerCase()}`
+	const languages = Object.keys(libraryData)
+
+	return languages.flatMap((lang) =>
+		libraryData[lang].flatMap((book) => {
+			if (!book.ref) return []
+			const ref = book.ref
+
+			const alternates = languages
+				.filter((other) => libraryData[other].some((b) => b.ref === ref))
+				.map((other) => `    <xhtml:link rel="alternate" hreflang="${other}" href="${bookUrl(other, ref)}" />`)
+			alternates.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${bookUrl('en', ref)}" />`)
+
+			return [
+				`  <url>
+    <loc>${bookUrl(lang, ref)}</loc>
+    <priority>0.5</priority>
+${alternates.join('\n')}
+  </url>`
+			]
+		})
+	)
+}
+
+function generateSitemapXML(
+	sitemapEntries: ProcessedSitemapEntry[],
+	baseUrl: string,
+	bookEntries: string[] = []
+): string {
 	const entries = sitemapEntries.map(entry => {
 		const fullUrl = `${baseUrl}${entry.uri}`
 		const lastmod = new Date(entry.modified).toISOString()
@@ -476,7 +512,7 @@ function generateSitemapXML(sitemapEntries: ProcessedSitemapEntry[], baseUrl: st
     <changefreq>weekly</changefreq>
     <priority>${priority}</priority>${hreflangEntries ? '\n' + hreflangEntries : ''}
   </url>`
-	}).join('\n')
+	}).concat(bookEntries).join('\n')
 	
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
@@ -520,11 +556,12 @@ async function fetchAndSaveLibraryData() {
 		mkdirSync(staticDir, { recursive: true })
 
 		// Generate combined sitemap with hreflang support
-		const sitemapXML = generateSitemapXML(sitemapEntries, baseUrl)
+		const bookEntries = generateBookSitemapEntries(libraryData, baseUrl)
+		const sitemapXML = generateSitemapXML(sitemapEntries, baseUrl, bookEntries)
 		writeFileSync(join(staticDir, 'sitemap.xml'), sitemapXML, 'utf-8')
 
 		console.log('✅ Library data, taxonomies, and sitemap XML generated successfully')
-		console.log(`📄 Generated sitemap.xml with ${sitemapEntries.length} entries`)
+		console.log(`📄 Generated sitemap.xml with ${sitemapEntries.length} pages and ${bookEntries.length} books`)
 	} catch (error) {
 		console.error('Failed to generate data:', error)
 		process.exit(1)

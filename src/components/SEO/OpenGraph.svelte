@@ -2,6 +2,7 @@
   /*
     This component ingests an object containing the data from YoastSeO and outputs meta and Opengraph tags
   */
+  import type { LanguageAlternate } from '$lib/utilities/alternates'
   import type { ImageObject } from '$lib/types/wp-types'
 
   interface ImageSize {
@@ -20,15 +21,23 @@
     pageTitle: string;
     siteTitle?: string;
     siteUrl: string;
+    /** The page's own full address */
+    pageUrl: string;
+    imageAlt?: string;
+    /** The page in each language, where it exists in both; paths without the site's address */
+    alternates?: LanguageAlternate[];
   }
 
   let {
     image,
     metadescription,
-    ogLanguage = 'en_UK',
+    ogLanguage = 'en_GB',
     pageTitle,
-    siteTitle = 'Not here to be liked',
-    siteUrl
+    siteTitle = 'Decolonizing the page',
+    siteUrl,
+    pageUrl,
+    imageAlt = 'Decolonizing the page',
+    alternates = []
   }: Props = $props();
 
   // Helper function to select an image size, defaults to 'large' or the first available size
@@ -54,10 +63,14 @@
   <meta name="description" content={metadescription} />
   <meta property="og:site_name" content={siteTitle} />
   <meta property="og:locale" content={ogLanguage} />
-  <meta property="og:url" content={siteUrl} />
+  <link rel="canonical" href={pageUrl} />
+  {#each alternates as { hreflang, path }}
+    <link rel="alternate" {hreflang} href="{siteUrl}{path}" />
+  {/each}
+  <meta property="og:url" content={pageUrl} />
   <meta property="og:type" content="website" />
   <meta property="og:title" content={pageTitle} />
   <meta property="og:description" content={metadescription} />
   <meta property="og:image" content={imageUrl || fallbackImageUrl} />
-  <meta property="og:image:alt" content="Decolonizing the page" />
+  <meta property="og:image:alt" content={imageAlt} />
 </svelte:head>

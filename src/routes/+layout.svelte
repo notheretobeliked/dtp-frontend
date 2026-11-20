@@ -12,6 +12,8 @@
 	import Label from '$components/molecules/label.svelte'
 	import { slide } from 'svelte/transition'
 	import { activeBook } from '$stores/activeBook'
+	import { bookDataPath } from '$lib/utilities/library'
+	import { languageAlternates } from '$lib/utilities/alternates'
 	import { language } from '$stores/language'
 	import { afterNavigate } from '$app/navigation'
 	import { onMount } from 'svelte'
@@ -22,12 +24,21 @@
 	}
 
 	let { data, children }: Props = $props()
-	let { seo, menu, uri, siteUrl } = data
-	const menuItems = menu?.menuItems?.nodes
-	const image = seo.opengraphImage
-	const metadescription = seo.metaDesc
-	const pageTitle = seo.title
-	const siteTitle = seo.opengraphSiteName // Assuming this is used for og:site_name
+	let { siteUrl } = data
+	// A page may supply its own `seo` (a library book does); it then takes the
+	// place of the layout's.
+	const seo = $derived($page.data.seo ?? data.seo)
+	const image = $derived(seo.opengraphImage)
+	const metadescription = $derived(seo.metaDesc)
+	const pageTitle = $derived(seo.title)
+	const siteTitle = $derived(seo.opengraphSiteName) // Assuming this is used for og:site_name
+	const imageAlt = $derived(seo.imageAlt || image?.altText || undefined)
+	const card = $derived(seo.card)
+	const pageUrl = $derived(`${siteUrl}${$page.url.pathname}`)
+	const ogLanguage = $derived($page.url.pathname.startsWith('/ar') ? 'ar_AR' : 'en_GB')
+	const alternates = $derived(
+		languageAlternates($page.url.pathname, $page.data.translations ?? [])
+	)
 	let loading = $state(false)
 	afterNavigate(() => {
 		document.documentElement.lang = $language
@@ -49,8 +60,9 @@
 		if ($activeBook) {
 			showModal = true
 			loading = true
-			fetch(`/api/library-items?ref=${$activeBook}&lang=${$language}`)
-				.then((res) => res.json())
+			// A static file per book; a reference with no library record has none
+			fetch(bookDataPath($language, $activeBook))
+				.then((res) => (res.ok ? res.json() : null))
 				.then((data) => {
 					currentBook = data || null
 					loading = false
@@ -121,8 +133,18 @@
 </script>
 
 {#key $page.url.pathname}
-	<OpenGraph {image} {metadescription} {pageTitle} {siteTitle} {siteUrl} />
-	<Twitter {image} {metadescription} {pageTitle} {siteUrl} />
+	<OpenGraph
+		{image}
+		{imageAlt}
+		{metadescription}
+		{pageTitle}
+		{siteTitle}
+		{siteUrl}
+		{pageUrl}
+		{ogLanguage}
+		{alternates}
+	/>
+	<Twitter {image} {imageAlt} {metadescription} {pageTitle} {siteUrl} {pageUrl} {card} />
 {/key}
 
 {#key $page.url.pathname}

@@ -161,6 +161,10 @@ export const labelTranslations = writable({
 		en: 'Zeina Maasri',
 		ar: 'زينة معاصري'
 	},
+	viewInLibrary: {
+		en: 'View in the library',
+		ar: 'عرض في المكتبة'
+	},
 	printIncomplete: {
 		en: "Some images hadn't loaded yet. Print again for a complete copy.",
 		ar: 'لم يكتمل تحميل بعض الصور بعد. أعد الطباعة للحصول على نسخة كاملة.'

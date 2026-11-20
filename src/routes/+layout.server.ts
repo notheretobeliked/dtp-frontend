@@ -1,137 +1,82 @@
-export const prerender = true
+/*
+	What every page needs from outside itself: its language, and its title,
+	description and share image.
 
-import PageMeta from '$lib/graphql/query/menu.graphql?raw'
+	For a WordPress page these come from WordPress, when the site is built.
+	WordPress is never asked once the site is running: see canAskWordPress.
+	The library's books are not in WordPress, so nothing is asked about them
+	here: a book's page supplies its own title and image (see
+	library/[ref]/+page.server.ts).
+*/
+
+import { building, dev } from '$app/environment'
+import { error } from '@sveltejs/kit'
+import { PUBLIC_SITE_URL } from '$env/static/public'
 import type { PageMetaQuery } from '$lib/graphql/generated'
+import PageMeta from '$lib/graphql/query/page-meta.graphql?raw'
 import { checkResponse, graphqlQuery } from '$lib/utilities/graphql'
 import type { LayoutServerLoad } from './$types'
-import { error } from '@sveltejs/kit'
-import { PUBLIC_SITE_URL } from '$env/static/public' // Ensure this import is correct
-import { labelTranslations } from '$lib/labeltranslations'
-interface LoadReturn {
-	data: PageMetaQuery
-	labelTranslations: typeof labelTranslations
-	menu: NonNullable<PageMetaQuery['menu']>
-	languageCode: NonNullable<PageMetaQuery['page']>['languageCode']
-	translations: NonNullable<NonNullable<PageMetaQuery['page']>['translations']>
-	seo: NonNullable<NonNullable<PageMetaQuery['page']>['seo']>
-	uri: string
-	lang: string
-	siteUrl: string
+
+export const prerender = true
+
+type WordPressPage = NonNullable<PageMetaQuery['page']>
+type Seo = Extract<WordPressPage, { seo?: unknown }>['seo']
+
+/** Sections that exist without a WordPress page of their own behind them */
+const SECTIONS_WITHOUT_PAGE = ['/library', '/learning-hub']
+
+const isInSection = (uri: string, section: string) =>
+	uri === section || uri.startsWith(`${section}/`)
+
+// Every page that exists is built ahead of time. A request that reaches this
+// code on the running site is therefore for an address that doesn't exist
+// (scanners send these by the hundred), and is told so without a word to
+// WordPress, which can't take that kind of traffic.
+const canAskWordPress = building || dev
+
+export const load: LayoutServerLoad = async function load({ params, url }) {
+	// WordPress knows pages without their language prefix: /en/about is /about
+	const uri = url.pathname.replace(/^\/(en|ar)/, '') || '/'
+
+	const isBook = uri.startsWith('/library/')
+	const page = isBook || !canAskWordPress ? null : await fetchPage(uri)
+
+	const hasContent = page && 'seo' in page
+	if (!hasContent && !SECTIONS_WITHOUT_PAGE.some((section) => isInSection(uri, section))) {
+		error(404, 'Sorry, this page does not exist')
+	}
+
+	return {
+		lang: params.lang || 'en',
+		languageCode: (hasContent && page.languageCode) || 'en',
+		translations: (hasContent && page.translations) || [],
+		seo: seoFor(hasContent ? page.seo : null, uri),
+		uri,
+		siteUrl: PUBLIC_SITE_URL
+	}
 }
 
-export const load: LayoutServerLoad<LoadReturn> = async function load({ params, url }) {
+async function fetchPage(uri: string): Promise<WordPressPage | null> {
+	const response = await graphqlQuery(PageMeta, { uri })
+	checkResponse(response)
 
-	let uri = url.pathname
-	// Remove language prefix from URI before making the GraphQL query
-	uri = uri.replace(/^\/(en|ar)/, '')
-	
-	if (uri === '') {
-		uri = '/'
-	}
-	
-	const specialRoutes = [
-		'/library',
-		'/library/',
-		'/learning-hub',
-		'/learning-hub/',
-		'/ar/library',
-		'/ar/library/',
-		'/ar/learning-hub',
-		'/ar/learning-hub/',
-		'/en/library',
-		'/en/library/',
-		'/en/learning-hub',
-		'/en/learning-hub/'
-	]
+	const { data }: { data?: PageMetaQuery } = await response.json()
+	if (!data) error(500, 'No data received from GraphQL query')
 
-	// Check if current URI matches any of the special routes or their sub-routes
-	const isSpecialRoute = specialRoutes.some((route) => uri === route || uri.startsWith(`${route}/`))
+	return data.page ?? null
+}
 
-	try {
-		const response = await graphqlQuery(PageMeta, { uri: uri })
-		checkResponse(response)
-
-		const { data }: { data: PageMetaQuery } = await response.json()
-
-		
-		// Check if data exists first
-		if (!data) {
-			error(500, 'No data received from GraphQL query')
-		}
-
-		// Only check for page data if it's not a special route
-		if (!isSpecialRoute && (!data.page || !Object.keys(data.page).length)) {
-			error(404, 'Sorry, this page does not exist')
-		}
-
-		// Modify menu items to add 'current' key
-		if (data.menu?.menuItems?.nodes) {
-			data.menu.menuItems.nodes = data.menu.menuItems.nodes.map((node) => ({
-				...node,
-				current: node.uri === uri
-			}))
-		}
-
-		if (!data.menu) {
-			console.error('Menu data check failed:', data.menu)
-			error(500, 'Missing menu data')
-		}
-
-		const lang = params.lang || 'en'
-
-		// Handle SEO data more gracefully
-		let seoData = data.page?.seo
-		if (seoData?.opengraphUrl) {
-			const siteUrl = seoData.opengraphUrl.replace(
-				new URL(seoData.opengraphUrl).origin,
-				PUBLIC_SITE_URL
-			)
-			seoData = { ...seoData, opengraphUrl: siteUrl }
-		} else {
-			seoData = {
-				title: 'Decolonizing the Page',
-				metaDesc: 'Decolonizing the Page',
-				opengraphUrl: `${PUBLIC_SITE_URL}${uri}`,
-				opengraphImage: `${PUBLIC_SITE_URL}/decolonizingthepage.jpg`
-			}
-		}
-
+/** The page's own SEO fields, with its address moved from WordPress's domain to the site's */
+function seoFor(seo: Seo, uri: string) {
+	if (!seo?.opengraphUrl) {
 		return {
-			data,
-			labelTranslations,
-			lang,
-			menu: data.menu,
-			languageCode:
-				data.page &&
-				'__typename' in data.page &&
-				(data.page.__typename === 'Page' || data.page.__typename === 'Post')
-					? data.page.languageCode
-					: 'en',
-			translations: data.page?.translations || [],
-			seo: seoData,
-			uri,
-			siteUrl: PUBLIC_SITE_URL
-		} satisfies LoadReturn
-	} catch (err: unknown) {
-		// Check if it's a response error from the GraphQL query
-		if (err instanceof Response) {
-			error(err.status, await err.text())
+			title: 'Decolonizing the Page',
+			metaDesc: 'Decolonizing the Page',
+			opengraphUrl: `${PUBLIC_SITE_URL}${uri}`,
+			opengraphImage: `${PUBLIC_SITE_URL}/decolonizingthepage.jpg`
 		}
-
-		// Check if it's a SvelteKit HttpError
-		if (err && typeof err === 'object' && 'status' in err && 'body' in err) {
-			const httpError = err as { status: number; body: { message: string } }
-			error(httpError.status, httpError.body.message)
-		}
-
-		// Check if it's our known error type
-		const httpError = err as { status?: number; message: string }
-		if (httpError.status && httpError.message) {
-			error(httpError.status, httpError.message)
-		}
-
-		// Fallback for unknown errors
-		console.error('Unhandled error:', err)
-		error(500, 'An unexpected error occurred')
 	}
+
+	const wordPressOrigin = new URL(seo.opengraphUrl).origin
+	return { ...seo, opengraphUrl: seo.opengraphUrl.replace(wordPressOrigin, PUBLIC_SITE_URL) }
 }

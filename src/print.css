@@ -191,28 +191,18 @@
 		margin-bottom: 6mm !important;
 	}
 
-	/* Strip on-screen spacing and load/scroll animation states */
-	.print-exhibition :is(.layout-miniatures, .layout-centered, .layout-organic, .layout-organic-landscape) {
+	/* Strip on-screen spacing, hover and fade-in states. !important because
+	   the component's own styles would otherwise win. */
+	.print-exhibition .image-group {
 		margin: 0 0 8mm !important;
 		gap: 6mm !important;
-		visibility: visible !important;
-		opacity: 1 !important;
 	}
 
 	.print-exhibition .transition-opacity {
 		opacity: 1 !important;
 	}
 
-	.print-exhibition .images .absolute {
-		position: static !important;
-	}
-
-	.print-exhibition .images img[src^='data:'] {
-		display: none;
-	}
-
-	.print-exhibition .images [role='button'],
-	.print-exhibition .animation-frame {
+	.print-exhibition :is(.tile, .layout-animation) {
 		break-inside: avoid;
 		transform: none !important;
 	}
@@ -229,10 +219,11 @@
 		text-align: center;
 	}
 
-	.print-exhibition .layout-miniatures > div {
+	.print-exhibition .layout-miniatures > .tile {
 		display: inline-block !important;
 		vertical-align: top;
 		width: 30mm !important;
+		aspect-ratio: auto !important;
 		margin: 0 1mm 3mm;
 		text-align: start;
 	}
@@ -242,9 +233,9 @@
 		height: auto !important;
 	}
 
-	/* Centered and organic: cells flow through the whole cabinet two to a row,
+	/* Centered and organic: tiles flow through the whole cabinet two to a row,
 	   so groups don't leave half-empty rows. Every image gets the same box
-	   (62mm tall or the column width), aligned to the start of its cell. */
+	   (62mm tall or the column width), aligned to the start of its tile. */
 	.print-exhibition [id^='images-cabinet-'] > * {
 		margin-bottom: 0 !important;
 	}
@@ -256,34 +247,23 @@
 		widows: 1;
 	}
 
-	.print-exhibition [id^='images-cabinet-'] > :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) {
+	.print-exhibition [id^='images-cabinet-'] > :is(.layout-centered, .layout-organic) {
 		display: contents !important;
 	}
 
-	/* Organic's spacer divs have no image */
-	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div:not(:has(img)) {
-		display: none !important;
-	}
-
-	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) div:has(img) {
-		display: flex !important;
+	.print-exhibition :is(.layout-centered, .layout-organic) > .tile {
+		display: inline-flex !important;
 		flex-direction: column;
 		align-items: flex-start;
-		justify-content: flex-start !important;
-		width: 100% !important;
-		height: auto !important;
-		transform: none !important;
-	}
-
-	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) > div:has(img) {
-		display: inline-flex !important;
 		vertical-align: top;
 		width: calc(50% - 2mm) !important;
+		height: auto !important;
+		aspect-ratio: auto !important;
 		padding-inline-end: 8mm;
 		margin: 0 0 8mm !important;
 	}
 
-	.print-exhibition :is(.layout-centered:not(.layout-animation), .layout-organic, .layout-organic-landscape) img {
+	.print-exhibition :is(.layout-centered, .layout-organic) img {
 		width: auto !important;
 		height: auto !important;
 		max-width: 100%;
@@ -294,20 +274,22 @@
 	/* Animation: every frame, four to a row */
 	.print-exhibition .layout-animation {
 		display: block !important;
+		height: auto !important;
+		max-width: none !important;
 		margin: 0 0 8mm !important;
+		text-align: start;
 	}
 
-	.print-exhibition .layout-animation > .animation-frame {
+	.print-exhibition .animation-frame {
+		position: static !important;
 		display: inline-block !important;
 		vertical-align: top;
-		width: calc(25% - 2mm);
-		padding-inline-end: 3mm;
-		margin-bottom: 3mm;
-	}
-
-	.print-exhibition .animation-frame img {
-		width: 100% !important;
+		width: calc(25% - 5mm) !important;
 		height: auto !important;
+		margin: 0 !important;
+		margin-inline-end: 3mm !important;
+		margin-bottom: 3mm !important;
+		opacity: 1 !important;
 	}
 
 	/* Reference code under each image, matching the list of works */

@@ -10,14 +10,17 @@
 	import { onMount } from 'svelte'
 	import { get } from 'svelte/store'
 	import { labelTranslations } from '$stores/translations'
+	import { libraryPath, linkCredit, type CreditPart } from '$lib/utilities/library'
 	const duration = 300 // Duration of the slide animation in milliseconds
 
 	interface Props {
 		book: Book;
 		lang: 'en' | 'ar';
+		/** Start with the book's images showing, on screens where they are otherwise folded away */
+		imagesOpen?: boolean;
 	}
 
-	let { book, lang }: Props = $props();
+	let { book, lang, imagesOpen = false }: Props = $props();
 
 	const translations = get(labelTranslations)
 	let selectedImageIndex: number | null = $state(null)
@@ -27,7 +30,27 @@
 		title: string | null
 		alwaysShow?: boolean
 		ref?: string | null
+		/** The title as names that link into the library; see linkCredit() */
+		parts?: CreditPart[]
 	}
+
+	// Names and years link to the library filtered by them
+	const artistLinks = (credit: string | null) =>
+		credit ? linkCredit(credit, book.artists, 'selectedArtist', lang) : undefined
+	const authorLinks = book.author
+		? linkCredit(book.author, book.authors, 'selectedAuthor', lang)
+		: undefined
+	const publisherLinks = book.publisher
+		? linkCredit(book.publisher, book.publishers, 'selectedPublisher', lang)
+		: undefined
+	const yearLinks = book.year
+		? [
+				{
+					text: String(book.year),
+					href: libraryPath(lang, { yearFrom: String(book.year), yearTo: String(book.year) })
+				}
+			]
+		: undefined
 
 	interface LabelData {
 		[key: string]: LabelGroup[]
@@ -47,7 +70,8 @@
 				},
 				{
 					label: translations.author[lang],
-					title: book.author
+					title: book.author,
+					parts: authorLinks
 				},
 				{
 					label: translations.translator[lang],
@@ -59,7 +83,8 @@
 		group2: [
 			{
 				label: translations.publisher[lang],
-				title: book.publisher
+				title: book.publisher,
+				parts: publisherLinks
 			},
 			{
 				label: translations.place[lang],
@@ -67,7 +92,8 @@
 			},
 			{
 				label: translations.year[lang],
-				title: book.year?.toString() || null
+				title: book.year?.toString() || null,
+				parts: yearLinks
 			},
 			{
 				label: translations.edition[lang],
@@ -78,30 +104,36 @@
 		group3: [
 			{
 				label: translations.coverDesign[lang],
-				title: book.coverDesign
+				title: book.coverDesign,
+				parts: artistLinks(book.coverDesign)
 			},
 			{
 				label: translations.coverIllustration[lang],
-				title: book.coverIllustration
+				title: book.coverIllustration,
+				parts: artistLinks(book.coverIllustration)
 			},
 			{
 				label: translations.coverCalligraphy[lang],
-				title: book.coverCalligraphy
+				title: book.coverCalligraphy,
+				parts: artistLinks(book.coverCalligraphy)
 			}
 		].filter((item) => item.title),
 
 		group4: [
 			{
 				label: translations.pageDesign[lang],
-				title: book.pageDesign
+				title: book.pageDesign,
+				parts: artistLinks(book.pageDesign)
 			},
 			{
 				label: translations.pageIllustration[lang],
-				title: book.pageIllustration
+				title: book.pageIllustration,
+				parts: artistLinks(book.pageIllustration)
 			},
 			{
 				label: translations.pageCalligraphy[lang],
-				title: book.pageCalligraphy
+				title: book.pageCalligraphy,
+				parts: artistLinks(book.pageCalligraphy)
 			}
 		].filter((item) => item.title),
 
@@ -135,7 +167,7 @@
 		return total > 1 && index < total - 1
 	}
 
-	let showImages: boolean = $state(false)
+	let showImages: boolean = $state(imagesOpen)
 
 	const toggleImages = () => {
 		showImages = !showImages
@@ -171,7 +203,7 @@
 	onMount(() => {
 		const mediaQuery = window.matchMedia('(min-width: 1024px)')
 		smallScreen = !mediaQuery.matches
-		smallScreen && toggleImages()
+		smallScreen && !showImages && toggleImages()
 		if (scrollContainer) {
 			scrollContainer.scrollLeft = scrollContainer.scrollWidth
 		}
@@ -196,10 +228,11 @@
 			<!-- Group 1 -->
 			<div class="lg:contents {lang === 'en' ? 'pl-4 lg:pl-0' : 'pr-4 lg:pr-0'}">
 				<div class="lg:py-3 flex flex-col gap-2">
-					{#each labelData.group1 as { label, title, ref }, index}
+					{#each labelData.group1 as { label, title, ref, parts }, index}
 						<LabelAndTitle
 							{label}
 							{title}
+							{parts}
 							{ref}
 							underline={smallScreen ? true : shouldUnderline(index, labelData.group1.length)}
 						/>
@@ -208,10 +241,11 @@
 
 				<!-- Group 2 -->
 				<div class="lg:py-3 flex flex-col gap-2">
-					{#each labelData.group2 as { label, title }, index}
+					{#each labelData.group2 as { label, title, parts }, index}
 						<LabelAndTitle
 							{label}
 							{title}
+							{parts}
 							underline={shouldUnderline(index, labelData.group2.length)}
 						/>
 					{/each}
@@ -220,10 +254,11 @@
 			<div class="lg:contents {lang === 'en' ? 'pr-4 lg:pr-0' : 'pl-4 lg:pl-0'}">
 				<!-- Group 3 -->
 				<div class="lg:py-3 flex flex-col gap-2">
-					{#each labelData.group3 as { label, title }, index}
+					{#each labelData.group3 as { label, title, parts }, index}
 						<LabelAndTitle
 							{label}
 							{title}
+							{parts}
 							underline={smallScreen ? true : shouldUnderline(index, labelData.group1.length)}
 						/>
 					{/each}
@@ -231,10 +266,11 @@
 
 				<!-- Group 4 -->
 				<div class="lg:py-3 flex flex-col gap-2">
-					{#each labelData.group4 as { label, title }, index}
+					{#each labelData.group4 as { label, title, parts }, index}
 						<LabelAndTitle
 							{label}
 							{title}
+							{parts}
 							underline={smallScreen ? true : shouldUnderline(index, labelData.group1.length)}
 						/>
 					{/each}
@@ -242,10 +278,11 @@
 
 				<!-- Group 5 -->
 				<div class="lg:py-3 flex flex-col gap-2">
-					{#each labelData.group5 as { label, title }, index}
+					{#each labelData.group5 as { label, title, parts }, index}
 						<LabelAndTitle
 							{label}
 							{title}
+							{parts}
 							underline={shouldUnderline(index, labelData.group5.length)}
 						/>
 					{/each}
