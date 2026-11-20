@@ -13,6 +13,10 @@ export function checkResponse(response: Response) {
 	}
 }
 
+// WordPress answers in about a second. Past this it is overloaded or down, and
+// waiting longer only keeps the build, or a server function, hanging.
+const TIMEOUT_MS = 20_000
+
 export async function graphqlQuery<TData = any, TVariables = any>(
 	query: string,
 	variables: TVariables
@@ -26,6 +30,7 @@ export async function graphqlQuery<TData = any, TVariables = any>(
 			query,
 			variables
 		}),
-		cache: 'no-cache' // This tells the fetch to bypass the cache
+		cache: 'no-cache', // This tells the fetch to bypass the cache
+		signal: AbortSignal.timeout(TIMEOUT_MS)
 	})
 }

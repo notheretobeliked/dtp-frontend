@@ -3,11 +3,13 @@
 	description and share image.
 
 	For a WordPress page these come from WordPress, when the site is built.
+	WordPress is never asked once the site is running: see canAskWordPress.
 	The library's books are not in WordPress, so nothing is asked about them
 	here: a book's page supplies its own title and image (see
 	library/[ref]/+page.server.ts).
 */
 
+import { building, dev } from '$app/environment'
 import { error } from '@sveltejs/kit'
 import { PUBLIC_SITE_URL } from '$env/static/public'
 import type { PageMetaQuery } from '$lib/graphql/generated'
@@ -26,12 +28,18 @@ const SECTIONS_WITHOUT_PAGE = ['/library', '/learning-hub']
 const isInSection = (uri: string, section: string) =>
 	uri === section || uri.startsWith(`${section}/`)
 
+// Every page that exists is built ahead of time. A request that reaches this
+// code on the running site is therefore for an address that doesn't exist
+// (scanners send these by the hundred), and is told so without a word to
+// WordPress, which can't take that kind of traffic.
+const canAskWordPress = building || dev
+
 export const load: LayoutServerLoad = async function load({ params, url }) {
 	// WordPress knows pages without their language prefix: /en/about is /about
 	const uri = url.pathname.replace(/^\/(en|ar)/, '') || '/'
 
 	const isBook = uri.startsWith('/library/')
-	const page = isBook ? null : await fetchPage(uri)
+	const page = isBook || !canAskWordPress ? null : await fetchPage(uri)
 
 	const hasContent = page && 'seo' in page
 	if (!hasContent && !SECTIONS_WITHOUT_PAGE.some((section) => isInSection(uri, section))) {
