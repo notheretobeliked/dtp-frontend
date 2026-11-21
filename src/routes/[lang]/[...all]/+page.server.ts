@@ -16,7 +16,7 @@ export const entries = () => {
 import PageContent from '$lib/graphql/query/page.graphql?raw'
 import Posts from '$lib/graphql/query/posts.graphql?raw'
 import { checkResponse, graphqlQuery } from '$lib/utilities/graphql'
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
 import type { EditorBlock } from '$lib/types/wp-types'
 import { flatListToHierarchical } from '$lib/server/utilities'
@@ -133,6 +133,11 @@ export const load: PageServerLoad = async function load({ params, url, fetch }) 
 			})
 		}
 
+		// WordPress answers with nothing for an address it has no page for
+		if (!data.nodeByUri) {
+			error(404, 'Sorry, this page does not exist')
+		}
+
 		let editorBlocks: EditorBlock[] = data.nodeByUri.editorBlocks
 			? flatListToHierarchical(data.nodeByUri.editorBlocks)
 			: []
@@ -156,6 +161,9 @@ export const load: PageServerLoad = async function load({ params, url, fetch }) 
 			})
 		}
 	} catch (err: unknown) {
+		// A "not found" raised above is an answer, not a failure: pass it on as it is
+		if (isHttpError(err)) throw err
+
 		console.error('Server Error:', err)
 		const httpError = err as { status: number; message: string }
 		if (httpError.message) {

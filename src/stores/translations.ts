@@ -161,6 +161,22 @@ export const labelTranslations = writable({
 		en: 'Zeina Maasri',
 		ar: 'زينة معاصري'
 	},
+	pageNotFound: {
+		en: 'Page not found',
+		ar: 'الصفحة غير موجودة'
+	},
+	somethingWentWrong: {
+		en: 'Something went wrong',
+		ar: 'حدث خطأ ما'
+	},
+	home: {
+		en: 'Home',
+		ar: 'الرئيسية'
+	},
+	library: {
+		en: 'Library',
+		ar: 'مكتبة'
+	},
 	viewInLibrary: {
 		en: 'View in the library',
 		ar: 'عرض في المكتبة'

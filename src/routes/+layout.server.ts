@@ -22,16 +22,10 @@ export const prerender = true
 type WordPressPage = NonNullable<PageMetaQuery['page']>
 type Seo = Extract<WordPressPage, { seo?: unknown }>['seo']
 
-/** Sections that exist without a WordPress page of their own behind them */
-const SECTIONS_WITHOUT_PAGE = ['/library', '/learning-hub']
-
-const isInSection = (uri: string, section: string) =>
-	uri === section || uri.startsWith(`${section}/`)
-
 // Every page that exists is built ahead of time. A request that reaches this
 // code on the running site is therefore for an address that doesn't exist
-// (scanners send these by the hundred), and is told so without a word to
-// WordPress, which can't take that kind of traffic.
+// (scanners send these by the hundred), and WordPress, which can't take that
+// kind of traffic, isn't asked about it.
 const canAskWordPress = building || dev
 
 export const load: LayoutServerLoad = async function load({ params, url }) {
@@ -41,10 +35,10 @@ export const load: LayoutServerLoad = async function load({ params, url }) {
 	const isBook = uri.startsWith('/library/')
 	const page = isBook || !canAskWordPress ? null : await fetchPage(uri)
 
+	// A page WordPress doesn't know gets the site's defaults, not an error. It
+	// may be one of ours (the library), and if it is nothing at all, the page's
+	// own loader says so, and +error.svelte is shown inside this layout.
 	const hasContent = page && 'seo' in page
-	if (!hasContent && !SECTIONS_WITHOUT_PAGE.some((section) => isInSection(uri, section))) {
-		error(404, 'Sorry, this page does not exist')
-	}
 
 	return {
 		lang: params.lang || 'en',
