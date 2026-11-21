@@ -30,8 +30,9 @@ const isInSection = (uri: string, section: string) =>
 
 // Every page that exists is built ahead of time. A request that reaches this
 // code on the running site is therefore for an address that doesn't exist
-// (scanners send these by the hundred), and is told so without a word to
-// WordPress, which can't take that kind of traffic.
+// (scanners send these by the hundred). WordPress can't take that kind of
+// traffic and isn't asked: the layout loads with the site's defaults, and
+// the router, finding no page, shows +error.svelte inside it.
 const canAskWordPress = building || dev
 
 export const load: LayoutServerLoad = async function load({ params, url }) {
@@ -42,7 +43,8 @@ export const load: LayoutServerLoad = async function load({ params, url }) {
 	const page = isBook || !canAskWordPress ? null : await fetchPage(uri)
 
 	const hasContent = page && 'seo' in page
-	if (!hasContent && !SECTIONS_WITHOUT_PAGE.some((section) => isInSection(uri, section))) {
+	const hasNoPageByDesign = SECTIONS_WITHOUT_PAGE.some((section) => isInSection(uri, section))
+	if (canAskWordPress && !hasContent && !hasNoPageByDesign) {
 		error(404, 'Sorry, this page does not exist')
 	}
 

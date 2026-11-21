@@ -15,6 +15,7 @@
 	import { bookDataPath } from '$lib/utilities/library'
 	import { languageAlternates } from '$lib/utilities/alternates'
 	import { language } from '$stores/language'
+	import { labelTranslations } from '$stores/translations'
 	import { afterNavigate } from '$app/navigation'
 	import { onMount } from 'svelte'
 
@@ -30,7 +31,14 @@
 	const seo = $derived($page.data.seo ?? data.seo)
 	const image = $derived(seo.opengraphImage)
 	const metadescription = $derived(seo.metaDesc)
-	const pageTitle = $derived(seo.title)
+	// An error page (see +error.svelte) has no title of its own to offer
+	const errorLanguage = $derived($page.url.pathname.startsWith('/ar') ? 'ar' : 'en')
+	const errorHeading = $derived($page.status === 404 ? 'pageNotFound' : 'somethingWentWrong')
+	const pageTitle = $derived(
+		$page.error
+			? `${$labelTranslations[errorHeading][errorLanguage]} – Decolonizing the Page`
+			: seo.title
+	)
 	const siteTitle = $derived(seo.opengraphSiteName) // Assuming this is used for og:site_name
 	const imageAlt = $derived(seo.imageAlt || image?.altText || undefined)
 	const card = $derived(seo.card)
